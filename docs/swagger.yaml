@@ -29,6 +29,9 @@ definitions:
       embed_thumbnail:
         example: true
         type: boolean
+      h264_compatible:
+        example: true
+        type: boolean
       is_search:
         example: false
         type: boolean
@@ -64,9 +67,6 @@ definitions:
       url:
         example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
         type: string
-      whatsapp_compatible:
-        example: true
-        type: boolean
     required:
     - url
     type: object
@@ -348,6 +348,9 @@ definitions:
     type: object
   model.SocialMediaRequest:
     properties:
+      h264_compatible:
+        example: true
+        type: boolean
       max_filesize:
         type: string
       proxy:
@@ -377,9 +380,6 @@ definitions:
       url:
         example: https://www.instagram.com/reel/C0000000000/
         type: string
-      whatsapp_compatible:
-        example: true
-        type: boolean
     required:
     - url
     type: object
@@ -425,6 +425,9 @@ definitions:
         - opus
         example: mp3
         type: string
+      h264_compatible:
+        example: true
+        type: boolean
       max_filesize:
         type: string
       proxy:
@@ -445,9 +448,6 @@ definitions:
       url:
         example: https://www.tiktok.com/@tiktok/video/7106594312292453675
         type: string
-      whatsapp_compatible:
-        example: true
-        type: boolean
     required:
     - url
     type: object
@@ -487,6 +487,9 @@ definitions:
     type: object
   model.YouTubeVideoRequest:
     properties:
+      h264_compatible:
+        example: true
+        type: boolean
       max_filesize:
         example: 100M
         type: string
@@ -512,9 +515,6 @@ definitions:
       url:
         example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
         type: string
-      whatsapp_compatible:
-        example: true
-        type: boolean
     required:
     - url
     type: object
@@ -522,7 +522,7 @@ info:
   contact: {}
   description: Internal REST API wrapping yt-dlp and ffmpeg for downloading and searching
     media from YouTube, TikTok, Instagram, Threads, X (Twitter), SoundCloud, Facebook,
-    and more. Optimized for WhatsApp bots and Docker deployment.
+    and more.
   title: yt-dlp Media Downloader & Search API
   version: "1.0"
 paths:
@@ -654,8 +654,7 @@ paths:
       - files
     get:
       description: Streams a previously downloaded file. Pass ?delete_after=true to
-        automatically remove the file after transfer completes (ideal for WhatsApp
-        bots).
+        automatically remove the file after transfer completes.
       parameters:
       - description: File ID
         in: path
@@ -1231,8 +1230,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Downloads YouTube video in MP4 (H.264/AAC compatible with WhatsApp
-        by default).
+      description: Downloads YouTube video in MP4 (prefers H.264/AAC by default).
       parameters:
       - description: YouTube video request
         in: body

@@ -61,7 +61,7 @@ func (h *PlatformHandler) YouTubeSearch(c *gin.Context) {
 
 // YouTubeVideo godoc
 // @Summary      Download YouTube video
-// @Description  Downloads YouTube video in MP4 (H.264/AAC compatible with WhatsApp by default).
+// @Description  Downloads YouTube video in MP4 (prefers H.264/AAC by default).
 // @Tags         youtube
 // @Accept       json
 // @Produce      json
@@ -80,13 +80,13 @@ func (h *PlatformHandler) YouTubeVideo(c *gin.Context) {
 	}
 
 	dlReq := model.DownloadRequest{
-		URL:                req.URL,
-		Type:               "video",
-		Quality:            req.Quality,
-		ResponseMode:       req.ResponseMode,
-		WhatsAppCompatible: req.WhatsAppCompatible,
-		MaxFilesize:        req.MaxFilesize,
-		Proxy:              req.Proxy,
+		URL:            req.URL,
+		Type:           "video",
+		Quality:        req.Quality,
+		ResponseMode:   req.ResponseMode,
+		H264Compatible: req.H264Compatible,
+		MaxFilesize:    req.MaxFilesize,
+		Proxy:          req.Proxy,
 	}
 	executeDownload(c, h.cfg, h.service, h.logger, dlReq, model.PlatformYouTube)
 }
@@ -144,13 +144,13 @@ func (h *PlatformHandler) TikTokDownload(c *gin.Context) {
 	}
 
 	dlReq := model.DownloadRequest{
-		URL:                req.URL,
-		Type:               req.Type,
-		AudioFormat:        req.AudioFormat,
-		ResponseMode:       req.ResponseMode,
-		WhatsAppCompatible: req.WhatsAppCompatible,
-		MaxFilesize:        req.MaxFilesize,
-		Proxy:              req.Proxy,
+		URL:            req.URL,
+		Type:           req.Type,
+		AudioFormat:    req.AudioFormat,
+		ResponseMode:   req.ResponseMode,
+		H264Compatible: req.H264Compatible,
+		MaxFilesize:    req.MaxFilesize,
+		Proxy:          req.Proxy,
 	}
 	executeDownload(c, h.cfg, h.service, h.logger, dlReq, model.PlatformTikTok)
 }
@@ -290,13 +290,13 @@ func (h *PlatformHandler) handleSocialMedia(c *gin.Context, platform model.Platf
 	}
 
 	dlReq := model.DownloadRequest{
-		URL:                req.URL,
-		Type:               req.Type,
-		Quality:            req.Quality,
-		ResponseMode:       req.ResponseMode,
-		WhatsAppCompatible: req.WhatsAppCompatible,
-		MaxFilesize:        req.MaxFilesize,
-		Proxy:              req.Proxy,
+		URL:            req.URL,
+		Type:           req.Type,
+		Quality:        req.Quality,
+		ResponseMode:   req.ResponseMode,
+		H264Compatible: req.H264Compatible,
+		MaxFilesize:    req.MaxFilesize,
+		Proxy:          req.Proxy,
 	}
 	executeDownload(c, h.cfg, h.service, h.logger, dlReq, platform)
 }

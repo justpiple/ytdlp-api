@@ -418,9 +418,9 @@ func (d *Downloader) prepareDownloadOptions(
 		mediaType = "video"
 	}
 
-	waCompat := true
-	if req.WhatsAppCompatible != nil {
-		waCompat = *req.WhatsAppCompatible
+	h264Compat := true
+	if req.H264Compatible != nil {
+		h264Compat = *req.H264Compatible
 	}
 
 	embedThumb := true
@@ -429,15 +429,15 @@ func (d *Downloader) prepareDownloadOptions(
 	}
 
 	return ytdlp.DownloadOptions{
-		Target:             target,
-		Platform:           resolvedPlatform,
-		MediaType:          mediaType,
-		Quality:            req.Quality,
-		AudioFormat:        req.AudioFormat,
-		WhatsAppCompatible: waCompat,
-		EmbedThumbnail:     embedThumb,
-		MaxFilesize:        req.MaxFilesize,
-		Proxy:              req.Proxy,
+		Target:         target,
+		Platform:       resolvedPlatform,
+		MediaType:      mediaType,
+		Quality:        req.Quality,
+		AudioFormat:    req.AudioFormat,
+		H264Compatible: h264Compat,
+		EmbedThumbnail: embedThumb,
+		MaxFilesize:    req.MaxFilesize,
+		Proxy:          req.Proxy,
 	}, nil
 }
 

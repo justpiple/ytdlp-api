@@ -14,16 +14,16 @@ const progressTemplate = "download:YTDLP_PROGRESS|%(progress._percent_str)s|%(pr
 
 // DownloadOptions configures how yt-dlp downloads and post-processes media.
 type DownloadOptions struct {
-	Target             string
-	Platform           model.Platform
-	MediaType          string // "video" or "audio"
-	Quality            string // "best", "1080p", "720p", "480p", "360p", "worst"
-	AudioFormat        string // "mp3", "m4a", "opus", "wav"
-	WhatsAppCompatible bool
-	EmbedThumbnail     bool
-	MaxFilesize        string
-	Proxy              string
-	OutputDir          string
+	Target         string
+	Platform       model.Platform
+	MediaType      string // "video" or "audio"
+	Quality        string // "best", "1080p", "720p", "480p", "360p", "worst"
+	AudioFormat    string // "mp3", "m4a", "opus", "wav"
+	H264Compatible bool
+	EmbedThumbnail bool
+	MaxFilesize    string
+	Proxy          string
+	OutputDir      string
 }
 
 // BuildInfoArgs constructs CLI arguments for extracting JSON metadata without downloading.
@@ -114,10 +114,10 @@ func BuildDownloadArgs(cfg config.Config, opts DownloadOptions) []string {
 			args = append(args, "--embed-thumbnail", "--convert-thumbnails", "jpg")
 		}
 	} else {
-		formatSelector := videoFormatSelector(opts.Quality, opts.WhatsAppCompatible)
+		formatSelector := videoFormatSelector(opts.Quality, opts.H264Compatible)
 		args = append(args, "-f", formatSelector)
-		if opts.WhatsAppCompatible {
-			// Prefer H.264 (avc1) + AAC (m4a) so WhatsApp plays the MP4 inline without black screen.
+		if opts.H264Compatible {
+			// Prefer H.264 (avc1) + AAC (m4a) for universal inline playback across mobile and web players.
 			args = append(args, "-S", "vcodec:h264,fps,res,acodec:m4a", "--merge-output-format", "mp4")
 		} else {
 			args = append(args, "--merge-output-format", "mp4")
@@ -174,7 +174,7 @@ func normalizeAudioFormat(raw string) string {
 	}
 }
 
-func videoFormatSelector(quality string, whatsappCompatible bool) string {
+func videoFormatSelector(quality string, h264Compatible bool) string {
 	maxHeight := 0
 	switch strings.ToLower(strings.TrimSpace(quality)) {
 	case "1080p", "1080":
@@ -190,12 +190,12 @@ func videoFormatSelector(quality string, whatsappCompatible bool) string {
 	case "best":
 		maxHeight = 0
 	default:
-		// Default to 720p for fast WhatsApp delivery if unspecified.
+		// Default to 720p for fast delivery when quality is unspecified.
 		maxHeight = 720
 	}
 
 	if maxHeight > 0 {
-		if whatsappCompatible {
+		if h264Compatible {
 			return fmt.Sprintf(
 				"bestvideo[height<=%d][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=%d]+bestaudio/best[height<=%d]/best",
 				maxHeight,
@@ -210,7 +210,7 @@ func videoFormatSelector(quality string, whatsappCompatible bool) string {
 		)
 	}
 
-	if whatsappCompatible {
+	if h264Compatible {
 		return "bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo+bestaudio/best"
 	}
 	return "bestvideo+bestaudio/best"

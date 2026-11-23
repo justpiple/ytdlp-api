@@ -90,7 +90,7 @@ func (h *JobHandler) StreamJobEvents(c *gin.Context) {
 
 // DownloadFile godoc
 // @Summary      Download hosted temporary file
-// @Description  Streams a previously downloaded file. Pass ?delete_after=true to automatically remove the file after transfer completes (ideal for WhatsApp bots).
+// @Description  Streams a previously downloaded file. Pass ?delete_after=true to automatically remove the file after transfer completes.
 // @Tags         files
 // @Produce      octet-stream
 // @Param        file_id       path      string  true   "File ID"

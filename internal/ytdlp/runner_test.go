@@ -88,15 +88,15 @@ func TestBuildDownloadArgs(t *testing.T) {
 		MaxPlaylistItems: 10,
 	}
 
-	t.Run("whatsapp compatible video with env proxy and platform cookies", func(t *testing.T) {
+	t.Run("h264 compatible video with env proxy and platform cookies", func(t *testing.T) {
 		is := assert.New(t)
 		args := BuildDownloadArgs(cfg, DownloadOptions{
-			Target:             "https://www.instagram.com/reel/123/",
-			Platform:           model.PlatformInstagram,
-			MediaType:          "video",
-			Quality:            "720p",
-			WhatsAppCompatible: true,
-			OutputDir:          "/tmp/out",
+			Target:         "https://www.instagram.com/reel/123/",
+			Platform:       model.PlatformInstagram,
+			MediaType:      "video",
+			Quality:        "720p",
+			H264Compatible: true,
+			OutputDir:      "/tmp/out",
 		})
 
 		is.Contains(args, "--proxy")

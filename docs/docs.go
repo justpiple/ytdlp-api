@@ -181,7 +181,7 @@ const docTemplate = `{
         },
         "/files/{file_id}": {
             "get": {
-                "description": "Streams a previously downloaded file. Pass ?delete_after=true to automatically remove the file after transfer completes (ideal for WhatsApp bots).",
+                "description": "Streams a previously downloaded file. Pass ?delete_after=true to automatically remove the file after transfer completes.",
                 "produces": [
                     "application/octet-stream"
                 ],
@@ -1170,7 +1170,7 @@ const docTemplate = `{
         },
         "/youtube/video": {
             "post": {
-                "description": "Downloads YouTube video in MP4 (H.264/AAC compatible with WhatsApp by default).",
+                "description": "Downloads YouTube video in MP4 (prefers H.264/AAC by default).",
                 "consumes": [
                     "application/json"
                 ],
@@ -1295,6 +1295,10 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": true
                 },
+                "h264_compatible": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "is_search": {
                     "type": "boolean",
                     "example": false
@@ -1339,10 +1343,6 @@ const docTemplate = `{
                 "url": {
                     "type": "string",
                     "example": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                },
-                "whatsapp_compatible": {
-                    "type": "boolean",
-                    "example": true
                 }
             }
         },
@@ -1739,6 +1739,10 @@ const docTemplate = `{
                 "url"
             ],
             "properties": {
+                "h264_compatible": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "max_filesize": {
                     "type": "string"
                 },
@@ -1776,10 +1780,6 @@ const docTemplate = `{
                 "url": {
                     "type": "string",
                     "example": "https://www.instagram.com/reel/C0000000000/"
-                },
-                "whatsapp_compatible": {
-                    "type": "boolean",
-                    "example": true
                 }
             }
         },
@@ -1843,6 +1843,10 @@ const docTemplate = `{
                     ],
                     "example": "mp3"
                 },
+                "h264_compatible": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "max_filesize": {
                     "type": "string"
                 },
@@ -1869,10 +1873,6 @@ const docTemplate = `{
                 "url": {
                     "type": "string",
                     "example": "https://www.tiktok.com/@tiktok/video/7106594312292453675"
-                },
-                "whatsapp_compatible": {
-                    "type": "boolean",
-                    "example": true
                 }
             }
         },
@@ -1928,6 +1928,10 @@ const docTemplate = `{
                 "url"
             ],
             "properties": {
+                "h264_compatible": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "max_filesize": {
                     "type": "string",
                     "example": "100M"
@@ -1959,10 +1963,6 @@ const docTemplate = `{
                 "url": {
                     "type": "string",
                     "example": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                },
-                "whatsapp_compatible": {
-                    "type": "boolean",
-                    "example": true
                 }
             }
         }
@@ -1976,7 +1976,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{"http", "https"},
 	Title:            "yt-dlp Media Downloader & Search API",
-	Description:      "Internal REST API wrapping yt-dlp and ffmpeg for downloading and searching media from YouTube, TikTok, Instagram, Threads, X (Twitter), SoundCloud, Facebook, and more. Optimized for WhatsApp bots and Docker deployment.",
+	Description:      "Internal REST API wrapping yt-dlp and ffmpeg for downloading and searching media from YouTube, TikTok, Instagram, Threads, X (Twitter), SoundCloud, Facebook, and more.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -75,6 +75,7 @@ Auto-detects the platform from `url` and downloads video or audio.
 | `quality` | `string` | No | `"720p"` | `"best"`, `"1080p"`, `"720p"`, `"480p"`, `"360p"`, `"worst"` |
 | `audio_format` | `string` | No | `"mp3"` | `"mp3"`, `"m4a"`, `"opus"`, `"wav"` (when `type="audio"`) |
 | `response_mode` | `string` | No | `"url"` | `"url"`, `"stream"`, or `"async"` |
+| `h264_compatible` | `bool` | No | `true` | Prefer H.264 (`avc1`) + AAC (`m4a`) MP4 streams |
 | `embed_thumbnail` | `bool` | No | `true` | Embed cover art and metadata into `mp3`/`m4a` |
 | `is_search` | `bool` | No | `false` | Treat `url` as a search query (YouTube/SoundCloud) |
 | `max_filesize` | `string` | No | `MAX_FILESIZE` | Override max filesize (e.g. `"50M"`) |
@@ -102,16 +103,16 @@ Platform endpoints validate that `url` matches the target platform (`400 UNSUPPO
 
 - **YouTube**
   - `GET /api/v1/youtube/search?q=...&limit=5`
-  - `POST /api/v1/youtube/video` — Fields: `url` (required), `quality`, `response_mode`, `max_filesize`, `proxy`.
+  - `POST /api/v1/youtube/video` — Fields: `url` (required), `quality`, `response_mode`, `h264_compatible`, `max_filesize`, `proxy`.
   - `POST /api/v1/youtube/audio` — Fields: `url` (required — URL or search keyword), `audio_format`, `response_mode`, `embed_thumbnail`, `is_search`, `max_filesize`, `proxy`.
 - **TikTok**
-  - `POST /api/v1/tiktok/download` — Fields: `url` (required), `type` (`video`/`audio`), `audio_format`, `response_mode`, `max_filesize`, `proxy`.
+  - `POST /api/v1/tiktok/download` — Fields: `url` (required), `type` (`video`/`audio`), `audio_format`, `response_mode`, `h264_compatible`, `max_filesize`, `proxy`.
 - **Instagram, Threads, X (Twitter), Facebook**
   - `POST /api/v1/instagram/download`
   - `POST /api/v1/threads/download`
   - `POST /api/v1/twitter/download`
   - `POST /api/v1/facebook/download`
-  - Shared fields: `url` (required), `type` (`video`/`audio`), `quality`, `response_mode`, `max_filesize`, `proxy`. Multi-item carousels return multiple entries in `data.files[]`.
+  - Shared fields: `url` (required), `type` (`video`/`audio`), `quality`, `response_mode`, `h264_compatible`, `max_filesize`, `proxy`. Multi-item carousels return multiple entries in `data.files[]`.
 - **SoundCloud**
   - `GET /api/v1/soundcloud/search?q=...&limit=5`
   - `POST /api/v1/soundcloud/download` — Fields: `url` (required — URL or search keyword), `audio_format`, `response_mode`, `embed_thumbnail`, `is_search`, `max_filesize`, `proxy`.

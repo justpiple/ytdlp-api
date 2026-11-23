@@ -101,14 +101,14 @@ type MediaMetadata struct {
 
 // SearchResult represents a single item returned from YouTube or SoundCloud search.
 type SearchResult struct {
-	ID         string  `json:"id" example:"dQw4w9WgXcQ"`
-	Title      string  `json:"title" example:"Rick Astley - Never Gonna Give You Up"`
-	URL        string  `json:"url" example:"https://www.youtube.com/watch?v=dQw4w9WgXcQ"`
-	Uploader   string  `json:"uploader,omitempty" example:"Rick Astley"`
-	Duration   float64 `json:"duration_seconds,omitempty" example:"212"`
-	Thumbnail  string  `json:"thumbnail,omitempty"`
-	ViewCount  int64   `json:"view_count,omitempty" example:"1500000000"`
-	Platform   string  `json:"platform" example:"youtube"`
+	ID        string  `json:"id" example:"dQw4w9WgXcQ"`
+	Title     string  `json:"title" example:"Rick Astley - Never Gonna Give You Up"`
+	URL       string  `json:"url" example:"https://www.youtube.com/watch?v=dQw4w9WgXcQ"`
+	Uploader  string  `json:"uploader,omitempty" example:"Rick Astley"`
+	Duration  float64 `json:"duration_seconds,omitempty" example:"212"`
+	Thumbnail string  `json:"thumbnail,omitempty"`
+	ViewCount int64   `json:"view_count,omitempty" example:"1500000000"`
+	Platform  string  `json:"platform" example:"youtube"`
 }
 
 // DownloadedFile represents a processed media file stored temporarily for retrieval.
