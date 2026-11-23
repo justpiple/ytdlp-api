@@ -106,18 +106,17 @@ make build       # Build binary ke bin/ytdlp-api
 
 ## GitHub Actions CI/CD, GHCR & Webhook Notifikasi
 
-Repository ini dilengkapi workflow di `.github/workflows/`:
-- `test.yml`: `go mod verify`, `go mod tidy` check, `go build`, dan `go test -v -race -shuffle=on`.
-- `lint.yml`: `go vet` dan `golangci-lint`.
-- `security.yml`: `govulncheck`.
-- `docker.yml`: Build & push image ke **GitHub Container Registry (`ghcr.io/<owner>/<repo>:latest`)** setiap push ke `main`/`master` atau tag `v*`, ditambah **auto-rebuild mingguan (`cron: 0 3 * * 0`)** tanpa cache untuk menarik versi `yt-dlp` terbaru.
+Repository ini menggunakan 1 workflow ringkas di [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+- **`test`**: Menjalankan `go vet ./...` dan `go test -race -shuffle=on ./...` pada Go `1.26`.
+- **`docker`**: Berjalan setelah `test` lulus — otomatis mengambil versi `yt-dlp` terbaru dari PyPI (`YTDLP_VERSION`), mem-build image Docker (dengan GHA cache agar layer `apk`/`ffmpeg`/`deno` tidak dibangun ulang kalau tidak berubah), lalu push ke **GitHub Container Registry (`ghcr.io/<owner>/<repo>:latest`)**.
+- **Auto-refresh mingguan**: Cron setiap Minggu `03:00 UTC` mengecek & membungkus rilis `yt-dlp` terbaru.
 
 ### Mengaktifkan Webhook Notifikasi Build
 Tambahkan repository secret di **GitHub → Settings → Secrets and variables → Actions → New repository secret**:
 - Name: `BUILD_WEBHOOK_URL`
 - Value: URL webhook penerima (endpoint Bot WhatsApp, Discord, Telegram, atau ntfy.sh)
 
-Setiap kali workflow `docker.yml` selesai (baik `success` maupun `failure`), GitHub akan mengirim payload JSON berisi `repo`, `event`, `status`, `branch`, `sha`, `tags`, `digest`, dan `run_url`.
+Setiap kali workflow selesai (baik `success` maupun `failure`), GitHub akan mengirim payload JSON berisi `repo`, `event`, `status`, `branch`, `sha`, `ytdlp_version`, `tags`, `digest`, dan `run_url`.
 
 ### Pull Image dari GHCR di Server
 ```bash

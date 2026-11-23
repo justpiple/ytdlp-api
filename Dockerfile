@@ -27,11 +27,17 @@ RUN apk add --no-cache \
     python3 \
     py3-pip \
     tzdata && \
-    pip install --no-cache-dir --break-system-packages -U "yt-dlp[default]" && \
     addgroup -S appgroup && \
     adduser -S appuser -G appgroup && \
     mkdir -p /app/cookies /tmp/ytdlp-api && \
     chown -R appuser:appgroup /app /tmp/ytdlp-api
+
+ARG YTDLP_VERSION=latest
+RUN if [ "$YTDLP_VERSION" = "latest" ]; then \
+      pip install --no-cache-dir --break-system-packages -U "yt-dlp[default]"; \
+    else \
+      pip install --no-cache-dir --break-system-packages -U "yt-dlp[default]==${YTDLP_VERSION}"; \
+    fi
 
 WORKDIR /app
 
