@@ -1,0 +1,1282 @@
+basePath: /api/v1
+definitions:
+  model.APIResponse:
+    properties:
+      data: {}
+      message:
+        example: ok
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  model.DeleteFileResponse:
+    properties:
+      deleted:
+        example: f8b3a1c27d4e4f1a9b2c123456789abc
+        type: string
+    type: object
+  model.DownloadRequest:
+    properties:
+      audio_format:
+        enum:
+        - mp3
+        - m4a
+        - opus
+        - wav
+        example: mp3
+        type: string
+      embed_thumbnail:
+        example: true
+        type: boolean
+      is_search:
+        example: false
+        type: boolean
+      max_filesize:
+        example: 100M
+        type: string
+      proxy:
+        example: ""
+        type: string
+      quality:
+        enum:
+        - best
+        - 1080p
+        - 720p
+        - 480p
+        - 360p
+        - worst
+        example: 720p
+        type: string
+      response_mode:
+        enum:
+        - url
+        - stream
+        - async
+        example: url
+        type: string
+      type:
+        enum:
+        - video
+        - audio
+        example: video
+        type: string
+      url:
+        example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+        type: string
+      whatsapp_compatible:
+        example: true
+        type: boolean
+    required:
+    - url
+    type: object
+  model.DownloadResult:
+    properties:
+      files:
+        items:
+          $ref: '#/definitions/model.DownloadedFile'
+        type: array
+      metadata:
+        $ref: '#/definitions/model.MediaMetadata'
+      platform:
+        example: youtube
+        type: string
+    type: object
+  model.DownloadedFile:
+    properties:
+      download_url:
+        example: http://localhost:8080/api/v1/files/f8b3a1c2-7d4e-4f1a-9b2c-123456789abc
+        type: string
+      expires_at:
+        type: string
+      extension:
+        example: mp3
+        type: string
+      file_id:
+        example: f8b3a1c2-7d4e-4f1a-9b2c-123456789abc
+        type: string
+      filename:
+        example: Rick_Astley_-_Never_Gonna_Give_You_Up.mp3
+        type: string
+      mime_type:
+        example: audio/mpeg
+        type: string
+      size_bytes:
+        example: 5124300
+        type: integer
+    type: object
+  model.ErrorDetail:
+    properties:
+      code:
+        example: INVALID_REQUEST
+        type: string
+      message:
+        example: url is required
+        type: string
+    type: object
+  model.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/model.ErrorDetail'
+      success:
+        example: false
+        type: boolean
+    type: object
+  model.FormatOption:
+    properties:
+      acodec:
+        example: mp4a.40.2
+        type: string
+      direct_url:
+        type: string
+      extension:
+        example: mp4
+        type: string
+      filesize:
+        example: 12582912
+        type: integer
+      format_id:
+        example: "18"
+        type: string
+      fps:
+        example: 30
+        type: number
+      height:
+        example: 720
+        type: integer
+      resolution:
+        example: 1280x720
+        type: string
+      tbr_kbps:
+        example: 1200.5
+        type: number
+      vcodec:
+        example: avc1.64001F
+        type: string
+      width:
+        example: 1280
+        type: integer
+    type: object
+  model.HealthResponse:
+    properties:
+      active_jobs:
+        example: 0
+        type: integer
+      ffmpeg_version:
+        example: ffmpeg version 6.1.1
+        type: string
+      max_concurrent:
+        example: 4
+        type: integer
+      status:
+        example: ok
+        type: string
+      stored_files:
+        example: 2
+        type: integer
+      ytdlp_version:
+        example: 2025.01.15
+        type: string
+    type: object
+  model.InfoRequest:
+    properties:
+      include_formats:
+        example: true
+        type: boolean
+      proxy:
+        example: ""
+        type: string
+      url:
+        example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+        type: string
+    required:
+    - url
+    type: object
+  model.JobAcceptedResponse:
+    properties:
+      job_id:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+      sse_url:
+        example: http://localhost:8080/api/v1/jobs/a1b2c3d4-e5f6-7890-abcd-ef1234567890/events
+        type: string
+      status:
+        example: queued
+        type: string
+      status_url:
+        example: http://localhost:8080/api/v1/jobs/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+    type: object
+  model.MediaMetadata:
+    properties:
+      description:
+        type: string
+      duration_seconds:
+        example: 212
+        type: number
+      extractor:
+        example: youtube
+        type: string
+      formats:
+        items:
+          $ref: '#/definitions/model.FormatOption'
+        type: array
+      id:
+        example: dQw4w9WgXcQ
+        type: string
+      is_live:
+        example: false
+        type: boolean
+      like_count:
+        example: 18000000
+        type: integer
+      platform:
+        example: youtube
+        type: string
+      thumbnail:
+        example: https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg
+        type: string
+      title:
+        example: Rick Astley - Never Gonna Give You Up
+        type: string
+      upload_date:
+        example: "20091025"
+        type: string
+      uploader:
+        example: Rick Astley
+        type: string
+      uploader_url:
+        example: https://www.youtube.com/@RickAstleyYT
+        type: string
+      view_count:
+        example: 1500000000
+        type: integer
+      webpage_url:
+        example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+        type: string
+    type: object
+  model.PlatformCapability:
+    properties:
+      cookies_file_hint:
+        example: youtube.txt
+        type: string
+      display:
+        example: YouTube
+        type: string
+      features:
+        items:
+          type: string
+        type: array
+      name:
+        example: youtube
+        type: string
+    type: object
+  model.ProgressEvent:
+    properties:
+      downloaded_bytes:
+        example: 5242880
+        type: integer
+      error:
+        type: string
+      eta:
+        example: "00:03"
+        type: string
+      job_id:
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        type: string
+      message:
+        example: downloading media
+        type: string
+      progress_percent:
+        example: 45.5
+        type: number
+      result:
+        $ref: '#/definitions/model.DownloadResult'
+      speed:
+        example: 2.45MiB/s
+        type: string
+      status:
+        example: downloading
+        type: string
+      total_bytes:
+        example: 11534336
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  model.SearchResponse:
+    properties:
+      count:
+        example: 5
+        type: integer
+      platform:
+        example: youtube
+        type: string
+      query:
+        example: rick astley
+        type: string
+      results:
+        items:
+          $ref: '#/definitions/model.SearchResult'
+        type: array
+    type: object
+  model.SearchResult:
+    properties:
+      duration_seconds:
+        example: 212
+        type: number
+      id:
+        example: dQw4w9WgXcQ
+        type: string
+      platform:
+        example: youtube
+        type: string
+      thumbnail:
+        type: string
+      title:
+        example: Rick Astley - Never Gonna Give You Up
+        type: string
+      uploader:
+        example: Rick Astley
+        type: string
+      url:
+        example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+        type: string
+      view_count:
+        example: 1500000000
+        type: integer
+    type: object
+  model.SocialMediaRequest:
+    properties:
+      max_filesize:
+        type: string
+      proxy:
+        type: string
+      quality:
+        enum:
+        - best
+        - 1080p
+        - 720p
+        - 480p
+        - 360p
+        example: 720p
+        type: string
+      response_mode:
+        enum:
+        - url
+        - stream
+        - async
+        example: url
+        type: string
+      type:
+        enum:
+        - video
+        - audio
+        example: video
+        type: string
+      url:
+        example: https://www.instagram.com/reel/C0000000000/
+        type: string
+      whatsapp_compatible:
+        example: true
+        type: boolean
+    required:
+    - url
+    type: object
+  model.SoundCloudDownloadRequest:
+    properties:
+      audio_format:
+        enum:
+        - mp3
+        - m4a
+        - opus
+        - wav
+        example: mp3
+        type: string
+      embed_thumbnail:
+        example: true
+        type: boolean
+      is_search:
+        example: false
+        type: boolean
+      max_filesize:
+        type: string
+      proxy:
+        type: string
+      response_mode:
+        enum:
+        - url
+        - stream
+        - async
+        example: url
+        type: string
+      url:
+        example: https://soundcloud.com/artist/track
+        type: string
+    required:
+    - url
+    type: object
+  model.TikTokDownloadRequest:
+    properties:
+      audio_format:
+        enum:
+        - mp3
+        - m4a
+        - opus
+        example: mp3
+        type: string
+      max_filesize:
+        type: string
+      proxy:
+        type: string
+      response_mode:
+        enum:
+        - url
+        - stream
+        - async
+        example: url
+        type: string
+      type:
+        enum:
+        - video
+        - audio
+        example: video
+        type: string
+      url:
+        example: https://www.tiktok.com/@tiktok/video/7106594312292453675
+        type: string
+      whatsapp_compatible:
+        example: true
+        type: boolean
+    required:
+    - url
+    type: object
+  model.YouTubeAudioRequest:
+    properties:
+      audio_format:
+        enum:
+        - mp3
+        - m4a
+        - opus
+        - wav
+        example: mp3
+        type: string
+      embed_thumbnail:
+        example: true
+        type: boolean
+      is_search:
+        example: false
+        type: boolean
+      max_filesize:
+        example: 100M
+        type: string
+      proxy:
+        type: string
+      response_mode:
+        enum:
+        - url
+        - stream
+        - async
+        example: url
+        type: string
+      url:
+        example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+        type: string
+    required:
+    - url
+    type: object
+  model.YouTubeVideoRequest:
+    properties:
+      max_filesize:
+        example: 100M
+        type: string
+      proxy:
+        type: string
+      quality:
+        enum:
+        - best
+        - 1080p
+        - 720p
+        - 480p
+        - 360p
+        - worst
+        example: 720p
+        type: string
+      response_mode:
+        enum:
+        - url
+        - stream
+        - async
+        example: url
+        type: string
+      url:
+        example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+        type: string
+      whatsapp_compatible:
+        example: true
+        type: boolean
+    required:
+    - url
+    type: object
+info:
+  contact: {}
+  description: Internal REST API wrapping yt-dlp and ffmpeg for downloading and searching
+    media from YouTube, TikTok, Instagram, Threads, X (Twitter), SoundCloud, Facebook,
+    and more. Optimized for WhatsApp bots and Docker deployment.
+  title: yt-dlp Media Downloader & Search API
+  version: "1.0"
+paths:
+  /download:
+    post:
+      consumes:
+      - application/json
+      description: 'Auto-detects the platform from URL (YouTube, TikTok, Instagram,
+        Threads, X, SoundCloud, Facebook, and 1000+ yt-dlp sites) and downloads video
+        or audio. Supports response_mode: url (default), stream, or async.'
+      parameters:
+      - description: Download payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.DownloadRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DownloadResult'
+              type: object
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.JobAcceptedResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Universal media download
+      tags:
+      - unified
+  /facebook/download:
+    post:
+      consumes:
+      - application/json
+      description: Downloads Facebook Reels, Watch, and public videos.
+      parameters:
+      - description: Facebook request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.SocialMediaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DownloadResult'
+              type: object
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.JobAcceptedResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Download Facebook media
+      tags:
+      - facebook
+  /files/{file_id}:
+    delete:
+      description: Manually deletes a temporary file from disk before its TTL expires.
+      parameters:
+      - description: File ID
+        in: path
+        name: file_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DeleteFileResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Delete hosted temporary file
+      tags:
+      - files
+    get:
+      description: Streams a previously downloaded file. Pass ?delete_after=true to
+        automatically remove the file after transfer completes (ideal for WhatsApp
+        bots).
+      parameters:
+      - description: File ID
+        in: path
+        name: file_id
+        required: true
+        type: string
+      - default: false
+        description: Delete file immediately after download finishes
+        in: query
+        name: delete_after
+        type: boolean
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Download hosted temporary file
+      tags:
+      - files
+  /healthz:
+    get:
+      description: Checks API readiness, yt-dlp/ffmpeg binary availability, active
+        concurrency, and temp file count.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.HealthResponse'
+              type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.HealthResponse'
+              type: object
+      summary: Healthcheck
+      tags:
+      - system
+  /info:
+    post:
+      consumes:
+      - application/json
+      description: Extracts metadata, thumbnail, and available formats/direct URLs
+        without downloading media files.
+      parameters:
+      - description: Media URL and options
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.InfoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.MediaMetadata'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Extract media metadata
+      tags:
+      - unified
+  /instagram/download:
+    post:
+      consumes:
+      - application/json
+      description: Downloads Instagram Reels, Posts, Carousels, or Stories (supports
+        cookies/instagram.txt).
+      parameters:
+      - description: Instagram request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.SocialMediaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DownloadResult'
+              type: object
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.JobAcceptedResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Download Instagram media
+      tags:
+      - instagram
+  /jobs/{job_id}:
+    get:
+      description: Returns the current progress snapshot and final DownloadResult
+        (when completed) for an async job.
+      parameters:
+      - description: Job ID
+        in: path
+        name: job_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.ProgressEvent'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Get async job status
+      tags:
+      - jobs
+  /jobs/{job_id}/events:
+    get:
+      description: Opens a Server-Sent Events (text/event-stream) stream pushing real-time
+        download progress, postprocessing status, and completion payload.
+      parameters:
+      - description: Job ID
+        in: path
+        name: job_id
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE progress stream
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Stream async job progress via SSE
+      tags:
+      - jobs
+  /platforms:
+    get:
+      description: Returns primary supported platforms and their capabilities/cookies
+        hints.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.PlatformCapability'
+                  type: array
+              type: object
+      summary: List supported platforms
+      tags:
+      - system
+  /search:
+    get:
+      description: Searches YouTube or SoundCloud for tracks and videos.
+      parameters:
+      - default: youtube
+        description: Target platform (youtube or soundcloud)
+        enum:
+        - youtube
+        - soundcloud
+        in: query
+        name: platform
+        type: string
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - default: 5
+        description: Maximum results (1-25)
+        in: query
+        name: limit
+        type: integer
+      - description: Optional proxy override
+        in: query
+        name: proxy
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.SearchResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Cross-platform media search
+      tags:
+      - unified
+  /soundcloud/download:
+    post:
+      consumes:
+      - application/json
+      description: Downloads SoundCloud track as MP3/M4A/Opus with optional embedded
+        cover art. Accepts a SoundCloud URL or search query.
+      parameters:
+      - description: SoundCloud request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.SoundCloudDownloadRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DownloadResult'
+              type: object
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.JobAcceptedResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Download SoundCloud audio
+      tags:
+      - soundcloud
+  /soundcloud/search:
+    get:
+      description: Searches SoundCloud tracks by keyword.
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - default: 5
+        description: Maximum results (1-25)
+        in: query
+        name: limit
+        type: integer
+      - description: Optional proxy override
+        in: query
+        name: proxy
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.SearchResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Search SoundCloud
+      tags:
+      - soundcloud
+  /threads/download:
+    post:
+      consumes:
+      - application/json
+      description: Downloads Threads videos and carousel posts.
+      parameters:
+      - description: Threads request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.SocialMediaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DownloadResult'
+              type: object
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.JobAcceptedResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Download Threads media
+      tags:
+      - threads
+  /tiktok/download:
+    post:
+      consumes:
+      - application/json
+      description: Downloads TikTok video (watermark-free when available), audio,
+        or multi-slide items.
+      parameters:
+      - description: TikTok request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.TikTokDownloadRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DownloadResult'
+              type: object
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.JobAcceptedResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Download TikTok media
+      tags:
+      - tiktok
+  /twitter/download:
+    post:
+      consumes:
+      - application/json
+      description: Downloads videos, GIFs, and multi-video posts from X / Twitter.
+      parameters:
+      - description: X / Twitter request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.SocialMediaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DownloadResult'
+              type: object
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.JobAcceptedResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Download X (Twitter) media
+      tags:
+      - twitter
+  /youtube/audio:
+    post:
+      consumes:
+      - application/json
+      description: Downloads YouTube audio as MP3/M4A/Opus with optional embedded
+        thumbnail. Accepts a YouTube URL or a search keyword (auto-plays top result).
+      parameters:
+      - description: YouTube audio or !play request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.YouTubeAudioRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DownloadResult'
+              type: object
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.JobAcceptedResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Download YouTube audio (!ytmp3 / !play)
+      tags:
+      - youtube
+  /youtube/search:
+    get:
+      description: Searches YouTube videos/tracks by keyword. Useful for !ytsearch
+        and !play bot commands.
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - default: 5
+        description: Maximum results (1-25)
+        in: query
+        name: limit
+        type: integer
+      - description: Optional proxy override
+        in: query
+        name: proxy
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.SearchResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Search YouTube
+      tags:
+      - youtube
+  /youtube/video:
+    post:
+      consumes:
+      - application/json
+      description: Downloads YouTube video in MP4 (H.264/AAC compatible with WhatsApp
+        by default).
+      parameters:
+      - description: YouTube video request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.YouTubeVideoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DownloadResult'
+              type: object
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.JobAcceptedResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Download YouTube video
+      tags:
+      - youtube
+schemes:
+- http
+- https
+swagger: "2.0"

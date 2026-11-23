@@ -1,0 +1,9 @@
+.git
+.env
+bin/
+dist/
+coverage.*
+*.out
+tmp/
+/tmp/
+cookies/*.txt

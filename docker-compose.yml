@@ -1,0 +1,34 @@
+services:
+  ytdlp-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ytdlp-api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: ${PORT:-8080}
+      GIN_MODE: ${GIN_MODE:-release}
+      BASE_URL: ${BASE_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PROXY_URL: ${PROXY_URL:-}
+      COOKIES_FILE: ${COOKIES_FILE:-}
+      COOKIES_DIR: /app/cookies
+      TEMP_DIR: /tmp/ytdlp-api
+      FILE_TTL: ${FILE_TTL:-15m}
+      CLEANUP_INTERVAL: ${CLEANUP_INTERVAL:-5m}
+      MAX_CONCURRENT_DOWNLOADS: ${MAX_CONCURRENT_DOWNLOADS:-4}
+      DOWNLOAD_TIMEOUT: ${DOWNLOAD_TIMEOUT:-5m}
+      INFO_TIMEOUT: ${INFO_TIMEOUT:-45s}
+      MAX_FILESIZE: ${MAX_FILESIZE:-100M}
+      MAX_PLAYLIST_ITEMS: ${MAX_PLAYLIST_ITEMS:-10}
+    volumes:
+      - ./cookies:/app/cookies:ro
+      - ytdlp_temp:/tmp/ytdlp-api
+
+volumes:
+  ytdlp_temp:
