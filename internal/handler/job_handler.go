@@ -106,7 +106,10 @@ func (h *JobHandler) DownloadFile(c *gin.Context) {
 		return
 	}
 
-	deleteAfter, _ := strconv.ParseBool(c.DefaultQuery("delete_after", "false"))
+	deleteAfter := false
+	if parsed, parseErr := strconv.ParseBool(c.DefaultQuery("delete_after", "false")); parseErr == nil {
+		deleteAfter = parsed
+	}
 	if deleteAfter {
 		defer func() {
 			if delErr := h.service.DeleteFile(fileID); delErr != nil {

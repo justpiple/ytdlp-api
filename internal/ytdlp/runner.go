@@ -231,9 +231,18 @@ func ParseProgressLine(line string) (model.ProgressEvent, bool) {
 		}
 
 		percentStr := strings.TrimSpace(strings.TrimSuffix(parts[1], "%"))
-		percent, _ := strconv.ParseFloat(percentStr, 64)
-		downloaded, _ := strconv.ParseInt(strings.TrimSpace(parts[2]), 10, 64)
-		total, _ := strconv.ParseInt(strings.TrimSpace(parts[3]), 10, 64)
+		var percent float64
+		if parsed, err := strconv.ParseFloat(percentStr, 64); err == nil {
+			percent = parsed
+		}
+		var downloaded int64
+		if parsed, err := strconv.ParseInt(strings.TrimSpace(parts[2]), 10, 64); err == nil {
+			downloaded = parsed
+		}
+		var total int64
+		if parsed, err := strconv.ParseInt(strings.TrimSpace(parts[3]), 10, 64); err == nil {
+			total = parsed
+		}
 
 		return model.ProgressEvent{
 			Status:          model.JobStatusDownloading.String(),

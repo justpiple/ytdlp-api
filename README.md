@@ -101,3 +101,25 @@ make test-race   # Jalankan seluruh unit test dengan race detector
 make vet         # Static analysis
 make build       # Build binary ke bin/ytdlp-api
 ```
+
+---
+
+## GitHub Actions CI/CD, GHCR & Webhook Notifikasi
+
+Repository ini dilengkapi workflow di `.github/workflows/`:
+- `test.yml`: `go mod verify`, `go mod tidy` check, `go build`, dan `go test -v -race -shuffle=on`.
+- `lint.yml`: `go vet` dan `golangci-lint`.
+- `security.yml`: `govulncheck`.
+- `docker.yml`: Build & push image ke **GitHub Container Registry (`ghcr.io/<owner>/<repo>:latest`)** setiap push ke `main`/`master` atau tag `v*`, ditambah **auto-rebuild mingguan (`cron: 0 3 * * 0`)** tanpa cache untuk menarik versi `yt-dlp` terbaru.
+
+### Mengaktifkan Webhook Notifikasi Build
+Tambahkan repository secret di **GitHub → Settings → Secrets and variables → Actions → New repository secret**:
+- Name: `BUILD_WEBHOOK_URL`
+- Value: URL webhook penerima (endpoint Bot WhatsApp, Discord, Telegram, atau ntfy.sh)
+
+Setiap kali workflow `docker.yml` selesai (baik `success` maupun `failure`), GitHub akan mengirim payload JSON berisi `repo`, `event`, `status`, `branch`, `sha`, `tags`, `digest`, dan `run_url`.
+
+### Pull Image dari GHCR di Server
+```bash
+docker pull ghcr.io/<username>/ytdlp-api:latest
+```
