@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bens-pa/ytdlp-api/internal/config"
-	"github.com/bens-pa/ytdlp-api/internal/job"
-	"github.com/bens-pa/ytdlp-api/internal/model"
-	"github.com/bens-pa/ytdlp-api/internal/storage"
-	"github.com/bens-pa/ytdlp-api/internal/ytdlp"
+	"github.com/justpiple/ytdlp-api/internal/config"
+	"github.com/justpiple/ytdlp-api/internal/job"
+	"github.com/justpiple/ytdlp-api/internal/model"
+	"github.com/justpiple/ytdlp-api/internal/storage"
+	"github.com/justpiple/ytdlp-api/internal/ytdlp"
 )
 
 // Downloader orchestrates info extraction, search, sync/stream/async downloads, and health checks.

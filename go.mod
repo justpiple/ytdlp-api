@@ -1,4 +1,4 @@
-module github.com/bens-pa/ytdlp-api
+module github.com/justpiple/ytdlp-api
 
 go 1.26.2
 

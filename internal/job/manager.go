@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bens-pa/ytdlp-api/internal/model"
-	"github.com/bens-pa/ytdlp-api/internal/storage"
+	"github.com/justpiple/ytdlp-api/internal/model"
+	"github.com/justpiple/ytdlp-api/internal/storage"
 )
 
 // ErrJobNotFound is returned when the requested async job ID does not exist.

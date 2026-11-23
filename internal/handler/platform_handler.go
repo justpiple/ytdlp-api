@@ -7,9 +7,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/bens-pa/ytdlp-api/internal/config"
-	"github.com/bens-pa/ytdlp-api/internal/model"
-	"github.com/bens-pa/ytdlp-api/internal/service"
+	"github.com/justpiple/ytdlp-api/internal/config"
+	"github.com/justpiple/ytdlp-api/internal/model"
+	"github.com/justpiple/ytdlp-api/internal/service"
 )
 
 // PlatformHandler exposes dedicated endpoints per social/media platform.

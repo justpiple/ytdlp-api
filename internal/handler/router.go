@@ -7,8 +7,8 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	"github.com/bens-pa/ytdlp-api/internal/config"
-	"github.com/bens-pa/ytdlp-api/internal/service"
+	"github.com/justpiple/ytdlp-api/internal/config"
+	"github.com/justpiple/ytdlp-api/internal/service"
 )
 
 // NewRouter builds and configures the Gin HTTP router with all routes and middlewares.

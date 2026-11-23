@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bens-pa/ytdlp-api/internal/config"
-	"github.com/bens-pa/ytdlp-api/internal/model"
+	"github.com/justpiple/ytdlp-api/internal/config"
+	"github.com/justpiple/ytdlp-api/internal/model"
 )
 
 func TestValidateURL(t *testing.T) {

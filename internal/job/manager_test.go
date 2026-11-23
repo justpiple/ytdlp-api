@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/bens-pa/ytdlp-api/internal/model"
+	"github.com/justpiple/ytdlp-api/internal/model"
 )
 
 func TestManagerConcurrencyLimit(t *testing.T) {

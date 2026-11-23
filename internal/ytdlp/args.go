@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bens-pa/ytdlp-api/internal/config"
-	"github.com/bens-pa/ytdlp-api/internal/model"
+	"github.com/justpiple/ytdlp-api/internal/config"
+	"github.com/justpiple/ytdlp-api/internal/model"
 )
 
 const progressTemplate = "download:YTDLP_PROGRESS|%(progress._percent_str)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress._speed_str)s|%(progress._eta_str)s"

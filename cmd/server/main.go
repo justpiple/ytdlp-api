@@ -12,13 +12,13 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/bens-pa/ytdlp-api/docs"
-	"github.com/bens-pa/ytdlp-api/internal/config"
-	"github.com/bens-pa/ytdlp-api/internal/handler"
-	"github.com/bens-pa/ytdlp-api/internal/job"
-	"github.com/bens-pa/ytdlp-api/internal/service"
-	"github.com/bens-pa/ytdlp-api/internal/storage"
-	"github.com/bens-pa/ytdlp-api/internal/ytdlp"
+	_ "github.com/justpiple/ytdlp-api/docs"
+	"github.com/justpiple/ytdlp-api/internal/config"
+	"github.com/justpiple/ytdlp-api/internal/handler"
+	"github.com/justpiple/ytdlp-api/internal/job"
+	"github.com/justpiple/ytdlp-api/internal/service"
+	"github.com/justpiple/ytdlp-api/internal/storage"
+	"github.com/justpiple/ytdlp-api/internal/ytdlp"
 )
 
 // @title           yt-dlp Media Downloader & Search API

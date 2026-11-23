@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/bens-pa/ytdlp-api/internal/model"
+	"github.com/justpiple/ytdlp-api/internal/model"
 )
 
 var (

@@ -14,8 +14,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/bens-pa/ytdlp-api/internal/config"
-	"github.com/bens-pa/ytdlp-api/internal/model"
+	"github.com/justpiple/ytdlp-api/internal/config"
+	"github.com/justpiple/ytdlp-api/internal/model"
 )
 
 // ProgressCallback receives parsed download and post-processing progress events.
