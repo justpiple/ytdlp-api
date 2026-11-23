@@ -1,117 +1,90 @@
-# yt-dlp Media Downloader & Search API (Go + Gin)
+# yt-dlp Media Downloader & Search API
 
-Internal REST API berbasis **Go + Gin** yang membungkus `yt-dlp` dan `ffmpeg` untuk mengunduh media serta melakukan pencarian dari berbagai platform:
+A lightweight **Go + Gin** REST API wrapping [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) and `ffmpeg` for extracting metadata, searching tracks/videos, and downloading media across major platforms. Designed for private/internal Docker deployments without authentication.
 
-- **YouTube** (`!ytmp3`, `!ytmp4`, `!ytsearch`, `!play`)
-- **TikTok** (video watermark-free, audio, multi-slide)
-- **Instagram** (Reels, Post, Carousel, Stories)
-- **Threads** (Video, Carousel)
-- **X (Twitter)** (Video, GIF, Multi-video)
-- **SoundCloud** (Search & Download audio)
-- **Facebook** (Reels, Watch, Public Video)
-- **Universal** (1000+ situs dari `yt-dlp`)
-
-Dirancang khusus untuk integrasi **Bot WhatsApp** dan deployment **Docker** tanpa autentikasi (internal/private network).
+> **API Reference:** See [API.md](API.md) for endpoints and examples, or open `/swagger/index.html` when running.
 
 ---
 
-## Fitur Utama
+## Supported Platforms
 
-- **Hybrid 3-Mode Response (`response_mode`)**:
-  - `"url"` *(default)*: Synchronous JSON berisi metadata lengkap + `download_url` lokal (`/api/v1/files/:id`). Ideal untuk 90% command bot WhatsApp (`!ytmp3`, `!tiktok`, `!ig`, `!sc`) karena `yt-dlp` hanya berjalan 1x dan mendukung multi-file/carousel.
-  - `"async"`: Mengembalikan `202 Accepted` + `job_id`, endpoint polling (`GET /api/v1/jobs/:id`), dan **SSE real-time progress** (`GET /api/v1/jobs/:id/events`) untuk video panjang/resolusi tinggi.
-  - `"stream"`: Langsung mengirimkan binary file (`Content-Disposition: attachment`).
-- **WhatsApp Codec Optimization (`whatsapp_compatible: true`)**: Memprioritaskan stream **H.264 (`avc1`) + AAC (`m4a`)** MP4 agar video dapat diputar langsung di WhatsApp Android/iOS/Web tanpa layar hitam.
-- **Auto-Cleanup (`?delete_after=true` + TTL Worker)**: File sementara otomatis terhapus setelah diambil bot atau setelah TTL kedaluwarsa.
-- **Proxy & Cookies Support**: Mendukung `PROXY_URL` di `.env`, override `proxy` per request, serta file cookies global (`COOKIES_FILE`) maupun per-platform (`cookies/instagram.txt`, `cookies/youtube.txt`, dll).
-- **Concurrency Limiter**: Membatasi jumlah proses `yt-dlp`/`ffmpeg` paralel (`MAX_CONCURRENT_DOWNLOADS`) agar container aman dari OOM.
-- **Swagger UI**: Dokumentasi interaktif di `/swagger/index.html`.
-
----
-
-## Menjalankan dengan Docker Compose
-
-1. Salin file contoh konfigurasi environment:
-   ```bash
-   cp .env.example .env
-   ```
-2. *(Opsional)* Atur `PROXY_URL` di `.env` atau letakkan file cookies Netscape format ke folder `cookies/` (mis. `cookies/instagram.txt`, `cookies/youtube.txt`).
-3. Jalankan container:
-   ```bash
-   docker compose up -d --build
-   ```
-4. Buka Swagger UI di `http://localhost:8080/swagger/index.html` atau cek healthcheck:
-   ```bash
-   curl http://localhost:8080/healthz
-   ```
+| Platform | Features | Endpoints |
+| :--- | :--- | :--- |
+| **YouTube** | Video, Audio, Search | `/api/v1/youtube/{search,video,audio}` |
+| **TikTok** | Video, Audio, Carousel | `/api/v1/tiktok/download` |
+| **Instagram** | Reels, Posts, Carousels, Stories | `/api/v1/instagram/download` |
+| **Threads** | Video, Image / Carousel | `/api/v1/threads/download` |
+| **X (Twitter)** | Video, GIF, Multi-video | `/api/v1/twitter/download` |
+| **SoundCloud** | Search, Audio | `/api/v1/soundcloud/{search,download}` |
+| **Facebook** | Reels, Watch, Public Video | `/api/v1/facebook/download` |
+| **Universal** | Auto-detect + [1,000+ `yt-dlp` sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) | `/api/v1/{info,download,search}` |
 
 ---
 
-## Contoh Penggunaan untuk Bot WhatsApp
+## Quick Start
 
-### 1. Command `!play` / `!ytmp3` (URL atau Kata Kunci)
+### Docker Compose
+
 ```bash
-curl -X POST http://localhost:8080/api/v1/youtube/audio \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "dewa 19 kangen",
-    "audio_format": "mp3",
-    "is_search": true
-  }'
-```
-Kemudian bot mengambil file dengan `?delete_after=true`:
-```bash
-curl -o song.mp3 "http://localhost:8080/api/v1/files/<file_id>?delete_after=true"
+cp .env.example .env
+docker compose up -d --build
 ```
 
-### 2. Command `!tiktok` / `!ig` / `!threads` / `!x` / `!fb` (Auto-detect via Universal Endpoint)
+### Prebuilt Image (GHCR)
+
 ```bash
-curl -X POST http://localhost:8080/api/v1/download \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://www.instagram.com/reel/C0000000000/",
-    "quality": "720p",
-    "whatsapp_compatible": true
-  }'
+docker pull ghcr.io/justpiple/ytdlp-api:latest
+docker run -d --name ytdlp-api \
+  -p 8080:8080 \
+  -v ./cookies:/app/cookies:ro \
+  ghcr.io/justpiple/ytdlp-api:latest
 ```
 
-### 3. Command `!ytmp4` Durasi Panjang dengan Live SSE Progress
-1. Mulai job async:
-   ```bash
-   curl -X POST http://localhost:8080/api/v1/youtube/video \
-     -H "Content-Type: application/json" \
-     -d '{
-       "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-       "quality": "1080p",
-       "response_mode": "async"
-     }'
-   ```
-2. Subscribe progress melalui SSE:
-   ```bash
-   curl -N http://localhost:8080/api/v1/jobs/<job_id>/events
-   ```
+### Local Development
 
----
-
-## Pengembangan Lokal
+Requires **Go 1.26+**, `yt-dlp`, `ffmpeg`, and `deno`.
 
 ```bash
-make swag        # Generate Swagger docs
-make test-race   # Jalankan seluruh unit test dengan race detector
-make vet         # Static analysis
-make build       # Build binary ke bin/ytdlp-api
+make swag        # Regenerate Swagger specs in docs/
+make test-race   # Run tests with -race and -shuffle=on
+make run         # Start server on :8080
 ```
 
 ---
 
-## GitHub Actions CI/CD & Dependabot `yt-dlp`
+## Configuration
 
-Repository ini menggunakan 1 workflow ringkas di [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ditambah Dependabot khusus `yt-dlp`:
-- **`test`**: Menjalankan `go vet ./...` dan `go test -race -shuffle=on ./...` pada Go `1.26`.
-- **`docker`**: Build image Docker, menjalankan **smoke test container** (`GET /healthz`, `GET /swagger/index.html`, dan `yt-dlp --version`), lalu push ke **GitHub Container Registry (`ghcr.io/<owner>/<repo>:latest`)** hanya jika smoke test lulus (pada PR hanya build & smoke test tanpa menimpa `:latest`).
-- **Auto-PR Update `yt-dlp` ([`.github/dependabot.yml`](.github/dependabot.yml))**: Versi `yt-dlp` di-pin di [`requirements.txt`](requirements.txt). Setiap ada rilis baru `yt-dlp` di PyPI, Dependabot otomatis membuat PR beserta *changelog*-nya dan langsung diuji oleh smoke test sebelum di-merge.
+Configure via `.env` or environment variables (see [`.env.example`](.env.example)):
 
-### Pull Image dari GHCR di Server
-```bash
-docker pull ghcr.io/<username>/ytdlp-api:latest
-```
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `PORT` | `8080` | HTTP listening port |
+| `GIN_MODE` | `release` | Gin mode (`debug`, `release`, `test`) |
+| `BASE_URL` | `""` | Base URL for generated `download_url` links (auto-detected if empty) |
+| `LOG_LEVEL` | `info` | JSON log level (`debug`, `info`, `warn`, `error`) |
+| `PROXY_URL` | `""` | Default upstream proxy (`http://...` or `socks5://...`) |
+| `COOKIES_FILE` | `""` | Fallback global Netscape `cookies.txt` path |
+| `COOKIES_DIR` | `./cookies` | Directory for per-platform cookies (e.g. `instagram.txt`, `youtube.txt`) |
+| `TEMP_DIR` | `/tmp/ytdlp-api` | Temporary storage path for downloaded files |
+| `FILE_TTL` | `15m` | TTL before hosted temporary files expire |
+| `CLEANUP_INTERVAL` | `5m` | Cleanup interval for expired temporary files |
+| `MAX_CONCURRENT_DOWNLOADS` | `4` | Max concurrent `yt-dlp`/`ffmpeg` processes |
+| `DOWNLOAD_TIMEOUT` | `5m` | Per-download timeout |
+| `INFO_TIMEOUT` | `45s` | Metadata & search timeout |
+| `MAX_FILESIZE` | `100M` | Default `--max-filesize` limit |
+| `MAX_PLAYLIST_ITEMS` | `10` | Max items downloaded for carousel/playlist URLs |
+
+---
+
+## Cookies & Proxy
+
+- **Per-platform cookies:** Place Netscape-format cookie files in `./cookies/` (e.g. `instagram.txt`, `youtube.txt`, `twitter.txt`, `threads.txt`, `facebook.txt`, `tiktok.txt`).
+- **Global cookies:** Set `COOKIES_FILE` as a fallback.
+- **Proxy:** Set `PROXY_URL` globally, or pass `"proxy"` in individual API requests.
+
+---
+
+## CI/CD
+
+- [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `go vet`, `go test -race -shuffle=on`, builds the Docker image, verifies `/healthz` & `/swagger/index.html` via a container smoke test, and pushes to `ghcr.io/justpiple/ytdlp-api`.
+- [`.github/dependabot.yml`](.github/dependabot.yml) tracks [`requirements.txt`](requirements.txt) daily and opens PRs for new `yt-dlp` releases.
