@@ -90,7 +90,6 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Push verified image to GHCR
-        id: push
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v6
         with:
@@ -100,39 +99,3 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-
-      - name: Notify build webhook
-        if: always()
-        env:
-          WEBHOOK_URL: ${{ secrets.BUILD_WEBHOOK_URL }}
-          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
-          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
-        run: |
-          if [ -z "$WEBHOOK_URL" ]; then
-            echo "BUILD_WEBHOOK_URL secret not configured; skipping webhook notification."
-            exit 0
-          fi
-          YTDLP_VER=$(cat requirements.txt | tr -d '\n')
-          jq -n \
-            --arg repo "${{ github.repository }}" \
-            --arg event "${{ github.event_name }}" \
-            --arg status "${{ job.status }}" \
-            --arg branch "${{ github.ref_name }}" \
-            --arg sha "${{ github.sha }}" \
-            --arg ytdlp_spec "$YTDLP_VER" \
-            --arg tags "$IMAGE_TAGS" \
-            --arg digest "$IMAGE_DIGEST" \
-            --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            '{
-              repo: $repo,
-              event: $event,
-              status: $status,
-              branch: $branch,
-              sha: $sha,
-              ytdlp_spec: $ytdlp_spec,
-              tags: ($tags | split("\n") | map(select(length > 0))),
-              digest: $digest,
-              run_url: $run_url
-            }' | curl -fsS -X POST "$WEBHOOK_URL" \
-              -H "Content-Type: application/json" \
-              -d @-

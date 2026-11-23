@@ -104,19 +104,12 @@ make build       # Build binary ke bin/ytdlp-api
 
 ---
 
-## GitHub Actions CI/CD, Dependabot `yt-dlp` & Webhook Notifikasi
+## GitHub Actions CI/CD & Dependabot `yt-dlp`
 
 Repository ini menggunakan 1 workflow ringkas di [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ditambah Dependabot khusus `yt-dlp`:
 - **`test`**: Menjalankan `go vet ./...` dan `go test -race -shuffle=on ./...` pada Go `1.26`.
 - **`docker`**: Build image Docker, menjalankan **smoke test container** (`GET /healthz`, `GET /swagger/index.html`, dan `yt-dlp --version`), lalu push ke **GitHub Container Registry (`ghcr.io/<owner>/<repo>:latest`)** hanya jika smoke test lulus (pada PR hanya build & smoke test tanpa menimpa `:latest`).
 - **Auto-PR Update `yt-dlp` ([`.github/dependabot.yml`](.github/dependabot.yml))**: Versi `yt-dlp` di-pin di [`requirements.txt`](requirements.txt). Setiap ada rilis baru `yt-dlp` di PyPI, Dependabot otomatis membuat PR beserta *changelog*-nya dan langsung diuji oleh smoke test sebelum di-merge.
-
-### Mengaktifkan Webhook Notifikasi Build
-Tambahkan repository secret di **GitHub → Settings → Secrets and variables → Actions → New repository secret**:
-- Name: `BUILD_WEBHOOK_URL`
-- Value: URL webhook penerima (endpoint Bot WhatsApp, Discord, Telegram, atau ntfy.sh)
-
-Setiap kali workflow selesai (baik `success` maupun `failure`), GitHub akan mengirim payload JSON berisi `repo`, `event`, `status`, `branch`, `sha`, `ytdlp_spec`, `tags`, `digest`, dan `run_url`.
 
 ### Pull Image dari GHCR di Server
 ```bash
