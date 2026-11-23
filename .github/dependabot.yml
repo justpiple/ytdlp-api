@@ -1,0 +1,9 @@
+version: 2
+updates:
+  # Monitor yt-dlp releases on PyPI and open a PR when a new version is available
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: daily
+    labels: ["dependencies", "yt-dlp"]
+    open-pull-requests-limit: 2

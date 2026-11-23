@@ -131,7 +131,6 @@ func BuildDownloadArgs(cfg config.Config, opts DownloadOptions) []string {
 func baseArgs(cfg config.Config, platform model.Platform, proxyOverride string) []string {
 	args := []string{
 		"--no-warnings",
-		"--no-call-home",
 		"--encoding", "utf-8",
 		"--ffmpeg-location", cfg.FFmpegPath,
 	}
