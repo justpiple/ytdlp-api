@@ -261,7 +261,7 @@ func runFFmpeg(ctx context.Context, ffmpegBin string, args ...string) error {
 }
 
 func resolveFFmpegAndFFprobe(ffmpegPath string) (string, string) {
-	ffmpegLoc := resolveFFmpegLocation(ffmpegPath)
+	ffmpegLoc := ResolveFFmpegLocation(ffmpegPath)
 	if ffmpegLoc == "" {
 		return "", ""
 	}

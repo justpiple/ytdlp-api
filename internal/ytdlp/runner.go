@@ -312,6 +312,7 @@ func classifyError(stderr string, err error) error {
 		return fmt.Errorf("%w: %s", ErrUpstreamBlocked, summarizeStderr(stderr))
 	case strings.Contains(lower, "video unavailable"),
 		strings.Contains(lower, "not available"),
+		strings.Contains(lower, "unsupported url"),
 		strings.Contains(lower, "404"):
 		return fmt.Errorf("%w: %s", ErrMediaNotFound, summarizeStderr(stderr))
 	default:

@@ -29,7 +29,7 @@ type DownloadResult struct {
 	Platform  string           `json:"platform" example:"instagram"`
 	MediaType string           `json:"media_type" enums:"video,audio,image,carousel" example:"carousel"`
 	Count     int              `json:"count" example:"3"`
-	Engine    string           `json:"engine" enums:"yt-dlp,gallery-dl" example:"gallery-dl"`
+	Engine    string           `json:"engine" enums:"yt-dlp,gallery-dl,threads" example:"gallery-dl"`
 	Metadata  MediaMetadata    `json:"metadata"`
 	Files     []DownloadedFile `json:"files"`
 }

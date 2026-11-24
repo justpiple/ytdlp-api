@@ -140,7 +140,7 @@ func baseArgs(cfg config.Config, platform model.Platform, proxyOverride string) 
 		"--encoding", "utf-8",
 	}
 
-	if ffmpegLoc := resolveFFmpegLocation(cfg.FFmpegPath); ffmpegLoc != "" {
+	if ffmpegLoc := ResolveFFmpegLocation(cfg.FFmpegPath); ffmpegLoc != "" {
 		args = append(args, "--ffmpeg-location", ffmpegLoc)
 	}
 
@@ -159,10 +159,10 @@ func baseArgs(cfg config.Config, platform model.Platform, proxyOverride string) 
 	return args
 }
 
-// resolveFFmpegLocation resolves bare executable names (e.g. "ffmpeg") via PATH
+// ResolveFFmpegLocation resolves bare executable names (e.g. "ffmpeg") via PATH
 // because yt-dlp's --ffmpeg-location requires an existing filesystem path and fails
 // when given an unresolved binary name.
-func resolveFFmpegLocation(ffmpegPath string) string {
+func ResolveFFmpegLocation(ffmpegPath string) string {
 	trimmed := strings.TrimSpace(ffmpegPath)
 	if trimmed == "" {
 		return ""

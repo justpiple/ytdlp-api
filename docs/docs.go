@@ -870,7 +870,7 @@ const docTemplate = `{
         },
         "/threads/download": {
             "post": {
-                "description": "Auto-detects and downloads Threads videos, photos, and carousel posts.",
+                "description": "Auto-detects and downloads Threads videos, photos, and carousel posts (supports threads.com and threads.net).",
                 "consumes": [
                     "application/json"
                 ],
@@ -1433,7 +1433,8 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "yt-dlp",
-                        "gallery-dl"
+                        "gallery-dl",
+                        "threads"
                     ],
                     "example": "gallery-dl"
                 },

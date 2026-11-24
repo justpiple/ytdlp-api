@@ -65,7 +65,7 @@ Extracts metadata and optional format list without downloading media files.
 
 ### `POST /api/v1/download`
 
-Auto-detects platform and media type (`video`, `audio`, `image`, or `carousel`) from `url` for non-YouTube sources. YouTube defaults to `"video"` unless `type: "audio"` is specified; SoundCloud always stays `"audio"`. Short/share links (`vt.tiktok.com`, `fb.watch`, `t.co`, `instagram.com/share/`, `pin.it`) are automatically resolved before downloading.
+Auto-detects platform and media type (`video`, `audio`, `image`, or `carousel`) from `url` for non-YouTube sources. YouTube defaults to `"video"` unless `type: "audio"` is specified; SoundCloud always stays `"audio"`. Short/share links (`vt.tiktok.com`, `fb.watch`, `t.co`, `instagram.com/share/`, `pin.it`, `threads.com/t/`) are automatically resolved before downloading.
 
 | Field | Type | Required | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
@@ -153,7 +153,7 @@ Platform endpoints validate that `url` matches the target platform (`400 UNSUPPO
   - `POST /api/v1/twitter/download`
   - `POST /api/v1/facebook/download`
   - `POST /api/v1/pinterest/download`
-  - Shared fields: `url` (required), `type` (`auto`/`video`/`audio`, default `"auto"`), `quality`, `audio_format`, `response_mode`, `h264_compatible`, `max_filesize`, `proxy`. Multi-item carousels return `media_type: "carousel"` and ordered entries in `data.files[]`. Pinterest also resolves `pin.it` short links automatically.
+  - Shared fields: `url` (required), `type` (`auto`/`video`/`audio`, default `"auto"`), `quality`, `audio_format`, `response_mode`, `h264_compatible`, `max_filesize`, `proxy`. Multi-item carousels return `media_type: "carousel"` and ordered entries in `data.files[]`. Pinterest resolves `pin.it` short links automatically, and Threads supports both `threads.com` and `threads.net` (via native SSR extraction, `engine: "threads"`).
 - **SoundCloud**
   - `GET /api/v1/soundcloud/search?q=...&limit=5`
   - `POST /api/v1/soundcloud/download` — Fields: `url` (required — URL or search keyword), `audio_format`, `response_mode`, `embed_thumbnail`, `is_search`, `max_filesize`, `proxy` (always audio-only).

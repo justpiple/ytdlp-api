@@ -79,6 +79,7 @@ definitions:
         enum:
         - yt-dlp
         - gallery-dl
+        - threads
         example: gallery-dl
         type: string
       files:
@@ -1088,7 +1089,7 @@ paths:
       consumes:
       - application/json
       description: Auto-detects and downloads Threads videos, photos, and carousel
-        posts.
+        posts (supports threads.com and threads.net).
       parameters:
       - description: Threads request
         in: body

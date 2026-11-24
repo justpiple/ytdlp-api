@@ -16,6 +16,7 @@ import (
 	"github.com/justpiple/ytdlp-api/internal/job"
 	"github.com/justpiple/ytdlp-api/internal/model"
 	"github.com/justpiple/ytdlp-api/internal/storage"
+	"github.com/justpiple/ytdlp-api/internal/threads"
 	"github.com/justpiple/ytdlp-api/internal/ytdlp"
 )
 
@@ -61,7 +62,30 @@ func (m *mockGalleryRunner) Version(ctx context.Context) (string, error) {
 	return m.versionFn(ctx)
 }
 
+type mockThreadsRunner struct {
+	infoFn     func(ctx context.Context, target, proxy string) (model.MediaMetadata, error)
+	downloadFn func(ctx context.Context, opts threads.Options, onProgress ytdlp.ProgressCallback) (model.MediaMetadata, []string, error)
+}
+
+func (m *mockThreadsRunner) GetInfo(ctx context.Context, target, proxy string) (model.MediaMetadata, error) {
+	if m.infoFn == nil {
+		return model.MediaMetadata{Platform: "threads", Formats: []model.FormatOption{}}, nil
+	}
+	return m.infoFn(ctx, target, proxy)
+}
+
+func (m *mockThreadsRunner) Download(ctx context.Context, opts threads.Options, onProgress ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+	if m.downloadFn == nil {
+		return model.MediaMetadata{}, nil, ytdlp.ErrMediaNotFound
+	}
+	return m.downloadFn(ctx, opts, onProgress)
+}
+
 func newTestService(t *testing.T, runner ytdlp.Runner, gallery gallerydl.Runner) (*Downloader, context.CancelFunc) {
+	return newTestServiceWithThreads(t, runner, gallery, &mockThreadsRunner{})
+}
+
+func newTestServiceWithThreads(t *testing.T, runner ytdlp.Runner, gallery gallerydl.Runner, threadsRunner threads.Runner) (*Downloader, context.CancelFunc) {
 	t.Helper()
 	cfg := config.Config{
 		TempDir:                t.TempDir(),
@@ -76,7 +100,7 @@ func newTestService(t *testing.T, runner ytdlp.Runner, gallery gallerydl.Runner)
 	require.NoError(t, err)
 	jobMgr := job.NewManager(cfg.MaxConcurrentDownloads)
 	rootCtx, cancel := context.WithCancel(t.Context())
-	return NewDownloader(rootCtx, cfg, runner, gallery, store, jobMgr), cancel
+	return NewDownloader(rootCtx, cfg, runner, gallery, threadsRunner, store, jobMgr), cancel
 }
 
 func TestDownloader_PlaySearchAndAudio(t *testing.T) {
@@ -504,6 +528,74 @@ func TestDownloader_AutoDetectAndCarouselStrategy(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorIs(t, err, ytdlp.ErrMediaNotFound)
 	})
+
+	t.Run("threads uses native threads runner for download and info without falling back to gallery-dl", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+
+		gdCalled := false
+		ytCalled := false
+		runner := &mockRunner{
+			infoFn: func(ctx context.Context, target string, platform model.Platform, includeFormats bool, proxy string) (model.MediaMetadata, error) {
+				ytCalled = true
+				return model.MediaMetadata{}, nil
+			},
+			downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
+				ytCalled = true
+				return nil, nil, nil
+			},
+		}
+		gallery := &mockGalleryRunner{
+			downloadFn: func(ctx context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+				gdCalled = true
+				return model.MediaMetadata{}, nil, nil
+			},
+		}
+		threadsRunner := &mockThreadsRunner{
+			infoFn: func(ctx context.Context, target, proxy string) (model.MediaMetadata, error) {
+				return model.MediaMetadata{
+					ID:         "DgFv18ok-A3",
+					Title:      "Threads caption",
+					Uploader:   "nexorapublic",
+					WebpageURL: target,
+					Extractor:  "threads",
+					Platform:   "threads",
+				}, nil
+			},
+			downloadFn: func(ctx context.Context, opts threads.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+				img := filepath.Join(opts.OutputDir, "01_DgFv18ok-A3.jpg")
+				require.NoError(t, os.WriteFile(img, []byte("jpg"), 0o640))
+				return model.MediaMetadata{
+					ID:         "DgFv18ok-A3",
+					Title:      "Threads caption",
+					Uploader:   "nexorapublic",
+					WebpageURL: opts.Target,
+					Extractor:  "threads",
+					Platform:   "threads",
+				}, []string{img}, nil
+			},
+		}
+
+		svc, cancel := newTestServiceWithThreads(t, runner, gallery, threadsRunner)
+		defer cancel()
+
+		info, err := svc.ExtractInfo(t.Context(), model.InfoRequest{
+			URL: "https://www.threads.com/@nexorapublic/post/DgFv18ok-A3",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "DgFv18ok-A3", info.ID)
+		assert.Equal(t, "threads", info.Platform)
+
+		res, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+			URL: "https://www.threads.com/@nexorapublic/post/DgFv18ok-A3",
+		}, model.PlatformUnknown)
+		require.NoError(t, err)
+		assert.False(t, gdCalled)
+		assert.False(t, ytCalled)
+		assert.Equal(t, "threads", res.Platform)
+		assert.Equal(t, engineThreads, res.Engine)
+		assert.Equal(t, model.MediaKindImage, res.MediaType)
+		require.Len(t, res.Files, 1)
+	})
 }
 
 func TestDownloader_H264CompatibilityPostProcessing(t *testing.T) {
@@ -564,7 +656,7 @@ printf 'h264-converted' > "$last"
 			rootCtx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			svc := NewDownloader(rootCtx, cfg, runner, &mockGalleryRunner{}, store, jobMgr)
+			svc := NewDownloader(rootCtx, cfg, runner, &mockGalleryRunner{}, &mockThreadsRunner{}, store, jobMgr)
 			res, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
 				URL:            "https://www.youtube.com/watch?v=DgGv7HKztVz",
 				H264Compatible: tt.h264Compat,

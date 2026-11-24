@@ -173,7 +173,7 @@ func (h *PlatformHandler) InstagramDownload(c *gin.Context) {
 
 // ThreadsDownload godoc
 // @Summary      Download Threads media
-// @Description  Auto-detects and downloads Threads videos, photos, and carousel posts.
+// @Description  Auto-detects and downloads Threads videos, photos, and carousel posts (supports threads.com and threads.net).
 // @Tags         threads
 // @Accept       json
 // @Produce      json

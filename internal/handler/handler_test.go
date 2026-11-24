@@ -23,6 +23,7 @@ import (
 	"github.com/justpiple/ytdlp-api/internal/model"
 	"github.com/justpiple/ytdlp-api/internal/service"
 	"github.com/justpiple/ytdlp-api/internal/storage"
+	"github.com/justpiple/ytdlp-api/internal/threads"
 	"github.com/justpiple/ytdlp-api/internal/ytdlp"
 )
 
@@ -102,6 +103,33 @@ func (m *handlerMockGalleryRunner) Version(_ context.Context) (string, error) {
 	return "1.32.21", nil
 }
 
+type handlerMockThreadsRunner struct{}
+
+func (m *handlerMockThreadsRunner) GetInfo(_ context.Context, target, _ string) (model.MediaMetadata, error) {
+	return model.MediaMetadata{
+		ID:         "DgFv18ok-A3",
+		Title:      "Threads Post",
+		WebpageURL: target,
+		Extractor:  "threads",
+		Platform:   "threads",
+		Formats:    []model.FormatOption{},
+	}, nil
+}
+
+func (m *handlerMockThreadsRunner) Download(_ context.Context, opts threads.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+	img := filepath.Join(opts.OutputDir, "01_threads.jpg")
+	if err := os.WriteFile(img, []byte("threads-img"), 0o640); err != nil {
+		return model.MediaMetadata{}, nil, err
+	}
+	return model.MediaMetadata{
+		ID:         "DgFv18ok-A3",
+		Title:      "Threads Post",
+		WebpageURL: opts.Target,
+		Extractor:  "threads",
+		Platform:   "threads",
+	}, []string{img}, nil
+}
+
 func setupTestRouter(t *testing.T) (http.Handler, *service.Downloader, *handlerMockGalleryRunner, context.CancelFunc) {
 	t.Helper()
 	cfg := config.Config{
@@ -119,7 +147,7 @@ func setupTestRouter(t *testing.T) (http.Handler, *service.Downloader, *handlerM
 	jobMgr := job.NewManager(cfg.MaxConcurrentDownloads)
 	rootCtx, cancel := context.WithCancel(t.Context())
 	galleryMock := &handlerMockGalleryRunner{}
-	svc := service.NewDownloader(rootCtx, cfg, &handlerMockRunner{}, galleryMock, store, jobMgr)
+	svc := service.NewDownloader(rootCtx, cfg, &handlerMockRunner{}, galleryMock, &handlerMockThreadsRunner{}, store, jobMgr)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
 	return NewRouter(cfg, svc, logger), svc, galleryMock, cancel
@@ -234,10 +262,17 @@ func TestUnifiedAndPlatformEndpoints(t *testing.T) {
 			wantStatus: http.StatusOK,
 		},
 		{
-			name:       "threads download",
+			name:       "threads net download",
 			method:     http.MethodPost,
 			path:       "/api/v1/threads/download",
 			body:       `{"url":"https://www.threads.net/@u/post/abc"}`,
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "threads com download",
+			method:     http.MethodPost,
+			path:       "/api/v1/threads/download",
+			body:       `{"url":"https://www.threads.com/@nexorapublic/post/DgFv18ok-A3"}`,
 			wantStatus: http.StatusOK,
 		},
 		{

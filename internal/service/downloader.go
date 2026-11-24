@@ -15,12 +15,14 @@ import (
 	"github.com/justpiple/ytdlp-api/internal/job"
 	"github.com/justpiple/ytdlp-api/internal/model"
 	"github.com/justpiple/ytdlp-api/internal/storage"
+	"github.com/justpiple/ytdlp-api/internal/threads"
 	"github.com/justpiple/ytdlp-api/internal/ytdlp"
 )
 
 const (
 	engineYTDLP     = "yt-dlp"
 	engineGalleryDL = "gallery-dl"
+	engineThreads   = "threads"
 )
 
 // Downloader orchestrates info extraction, search, sync/async downloads, and health checks.
@@ -28,6 +30,7 @@ type Downloader struct {
 	cfg     config.Config
 	runner  ytdlp.Runner
 	gallery gallerydl.Runner
+	threads threads.Runner
 	storage *storage.Manager
 	jobs    *job.Manager
 
@@ -41,6 +44,7 @@ func NewDownloader(
 	cfg config.Config,
 	runner ytdlp.Runner,
 	gallery gallerydl.Runner,
+	threadsRunner threads.Runner,
 	storageMgr *storage.Manager,
 	jobMgr *job.Manager,
 ) *Downloader {
@@ -48,6 +52,7 @@ func NewDownloader(
 		cfg:     cfg,
 		runner:  runner,
 		gallery: gallery,
+		threads: threadsRunner,
 		storage: storageMgr,
 		jobs:    jobMgr,
 		rootCtx: rootCtx,
@@ -75,6 +80,14 @@ func (d *Downloader) ExtractInfo(ctx context.Context, req model.InfoRequest) (mo
 	platform := ytdlp.DetectPlatform(targetURL)
 	runCtx, cancel := context.WithTimeout(ctx, d.cfg.InfoTimeout)
 	defer cancel()
+
+	if platform == model.PlatformThreads && d.threads != nil {
+		meta, err := d.threads.GetInfo(runCtx, targetURL, req.Proxy)
+		if err != nil {
+			return model.MediaMetadata{}, fmt.Errorf("extracting info: %w", err)
+		}
+		return meta, nil
+	}
 
 	meta, err := d.runner.GetInfo(runCtx, targetURL, platform, req.IncludeFormats, req.Proxy)
 	if err != nil {
@@ -264,6 +277,17 @@ func (d *Downloader) fetchRawMedia(
 	opts ytdlp.DownloadOptions,
 	onProgress ytdlp.ProgressCallback,
 ) (string, []model.MediaMetadata, []string, error) {
+	if opts.Platform == model.PlatformThreads && d.threads != nil {
+		thMeta, thFiles, err := d.runThreads(ctx, jobDir, opts, onProgress)
+		if err != nil {
+			return "", nil, nil, err
+		}
+		if len(thFiles) == 0 {
+			return "", nil, nil, fmt.Errorf("%w: no output file produced", ytdlp.ErrMediaNotFound)
+		}
+		return engineThreads, []model.MediaMetadata{thMeta}, thFiles, nil
+	}
+
 	if opts.MediaType != "auto" || d.gallery == nil {
 		metaList, files, err := d.runYTDLP(ctx, jobDir, opts, onProgress)
 		if err != nil {
@@ -347,6 +371,23 @@ func (d *Downloader) runGalleryDL(
 	return d.gallery.Download(ctx, gallerydl.Options{
 		Target:      opts.Target,
 		Platform:    opts.Platform,
+		MaxFilesize: opts.MaxFilesize,
+		MaxItems:    d.cfg.MaxPlaylistItems,
+		Proxy:       opts.Proxy,
+		OutputDir:   outputDir,
+	}, onProgress)
+}
+
+func (d *Downloader) runThreads(
+	ctx context.Context,
+	outputDir string,
+	opts ytdlp.DownloadOptions,
+	onProgress ytdlp.ProgressCallback,
+) (model.MediaMetadata, []string, error) {
+	return d.threads.Download(ctx, threads.Options{
+		Target:      opts.Target,
+		MediaType:   opts.MediaType,
+		AudioFormat: opts.AudioFormat,
 		MaxFilesize: opts.MaxFilesize,
 		MaxItems:    d.cfg.MaxPlaylistItems,
 		Proxy:       opts.Proxy,
