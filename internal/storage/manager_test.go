@@ -77,3 +77,33 @@ func TestManagerCleanupWorker(t *testing.T) {
 	_, err = os.Stat(stored.Path)
 	assert.True(t, os.IsNotExist(err))
 }
+
+func TestDetectMimeTypeAndMediaKind(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		ext      string
+		wantMime string
+		wantKind string
+	}{
+		{name: "mp4 video", ext: "mp4", wantMime: "video/mp4", wantKind: "video"},
+		{name: "mov video", ext: "mov", wantMime: "video/quicktime", wantKind: "video"},
+		{name: "mp3 audio", ext: "mp3", wantMime: "audio/mpeg", wantKind: "audio"},
+		{name: "jpeg image", ext: "jpg", wantMime: "image/jpeg", wantKind: "image"},
+		{name: "gif image", ext: "gif", wantMime: "image/gif", wantKind: "image"},
+		{name: "heic image", ext: "heic", wantMime: "image/heic", wantKind: "image"},
+		{name: "avif image", ext: "avif", wantMime: "image/avif", wantKind: "image"},
+		{name: "unknown binary", ext: "bin", wantMime: "application/octet-stream", wantKind: "other"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			is := assert.New(t)
+			mimeType := detectMimeType(tt.ext)
+			is.Equal(tt.wantMime, mimeType)
+			is.Equal(tt.wantKind, MediaKindFromMIME(mimeType))
+		})
+	}
+}

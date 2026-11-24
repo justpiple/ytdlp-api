@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,6 +14,7 @@ import (
 	"go.uber.org/goleak"
 
 	"github.com/justpiple/ytdlp-api/internal/config"
+	"github.com/justpiple/ytdlp-api/internal/gallerydl"
 	"github.com/justpiple/ytdlp-api/internal/job"
 	"github.com/justpiple/ytdlp-api/internal/model"
 	"github.com/justpiple/ytdlp-api/internal/storage"
@@ -38,10 +41,29 @@ func (m *mockRunner) Download(ctx context.Context, opts ytdlp.DownloadOptions, o
 }
 
 func (m *mockRunner) Versions(ctx context.Context) (string, string, error) {
+	if m.versionsFn == nil {
+		return "2026.10.26", "ffmpeg version 6.1.2", nil
+	}
 	return m.versionsFn(ctx)
 }
 
-func newTestService(t *testing.T, runner ytdlp.Runner) (*Downloader, context.CancelFunc) {
+type mockGalleryRunner struct {
+	downloadFn func(ctx context.Context, opts gallerydl.Options, onProgress ytdlp.ProgressCallback) (model.MediaMetadata, []string, error)
+	versionFn  func(ctx context.Context) (string, error)
+}
+
+func (m *mockGalleryRunner) Download(ctx context.Context, opts gallerydl.Options, onProgress ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+	return m.downloadFn(ctx, opts, onProgress)
+}
+
+func (m *mockGalleryRunner) Version(ctx context.Context) (string, error) {
+	if m.versionFn == nil {
+		return "1.32.21", nil
+	}
+	return m.versionFn(ctx)
+}
+
+func newTestService(t *testing.T, runner ytdlp.Runner, gallery gallerydl.Runner) (*Downloader, context.CancelFunc) {
 	t.Helper()
 	cfg := config.Config{
 		TempDir:                t.TempDir(),
@@ -56,7 +78,7 @@ func newTestService(t *testing.T, runner ytdlp.Runner) (*Downloader, context.Can
 	require.NoError(t, err)
 	jobMgr := job.NewManager(cfg.MaxConcurrentDownloads)
 	rootCtx, cancel := context.WithCancel(t.Context())
-	return NewDownloader(rootCtx, cfg, runner, store, jobMgr), cancel
+	return NewDownloader(rootCtx, cfg, runner, gallery, store, jobMgr), cancel
 }
 
 func TestDownloader_PlaySearchAndAudio(t *testing.T) {
@@ -90,7 +112,7 @@ func TestDownloader_PlaySearchAndAudio(t *testing.T) {
 		},
 	}
 
-	svc, cancel := newTestService(t, runner)
+	svc, cancel := newTestService(t, runner, &mockGalleryRunner{})
 	defer cancel()
 
 	res, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
@@ -102,7 +124,12 @@ func TestDownloader_PlaySearchAndAudio(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "https://www.youtube.com/watch?v=abc123", capturedTarget)
 	assert.Equal(t, "youtube", res.Platform)
+	assert.Equal(t, model.MediaKindAudio, res.MediaType)
+	assert.Equal(t, 1, res.Count)
+	assert.Equal(t, engineYTDLP, res.Engine)
 	require.Len(t, res.Files, 1)
+	assert.Equal(t, 1, res.Files[0].Index)
+	assert.Equal(t, model.MediaKindAudio, res.Files[0].MediaType)
 	assert.Equal(t, "mp3", res.Files[0].Extension)
 	assert.Contains(t, res.Files[0].DownloadURL, "http://localhost:8080/api/v1/files/")
 }
@@ -128,7 +155,7 @@ func TestDownloader_AsyncJobLifecycle(t *testing.T) {
 		},
 	}
 
-	svc, cancel := newTestService(t, runner)
+	svc, cancel := newTestService(t, runner, &mockGalleryRunner{})
 	defer cancel()
 
 	accepted, err := svc.StartAsyncDownload(t.Context(), "http://localhost:8080", model.DownloadRequest{
@@ -144,6 +171,274 @@ func TestDownloader_AsyncJobLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusCompleted.String(), ev.Status)
 	require.NotNil(t, ev.Result)
+	assert.Equal(t, model.MediaKindVideo, ev.Result.MediaType)
 	require.Len(t, ev.Result.Files, 1)
 	assert.Equal(t, "video/mp4", ev.Result.Files[0].MimeType)
+}
+
+func TestDownloader_AutoDetectAndCarouselStrategy(t *testing.T) {
+	t.Run("instagram auto prefers gallery-dl and returns ordered carousel", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+
+		ytCalled := false
+		runner := &mockRunner{
+			downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
+				ytCalled = true
+				return nil, nil, ytdlp.ErrMediaNotFound
+			},
+		}
+		gallery := &mockGalleryRunner{
+			downloadFn: func(ctx context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+				f1 := filepath.Join(opts.OutputDir, "01.jpg")
+				f2 := filepath.Join(opts.OutputDir, "02.mp4")
+				f3 := filepath.Join(opts.OutputDir, "03.jpg")
+				for _, p := range []string{f1, f2, f3} {
+					require.NoError(t, os.WriteFile(p, []byte("payload"), 0o640))
+				}
+				return model.MediaMetadata{ID: "C0ig", Title: "IG Carousel", Platform: "instagram"}, []string{f1, f2, f3}, nil
+			},
+		}
+
+		svc, cancel := newTestService(t, runner, gallery)
+		defer cancel()
+
+		res, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+			URL: "https://www.instagram.com/p/C0ig/",
+		}, model.PlatformUnknown)
+		require.NoError(t, err)
+		assert.False(t, ytCalled)
+		assert.Equal(t, "instagram", res.Platform)
+		assert.Equal(t, model.MediaKindCarousel, res.MediaType)
+		assert.Equal(t, 3, res.Count)
+		assert.Equal(t, engineGalleryDL, res.Engine)
+		require.Len(t, res.Files, 3)
+		assert.Equal(t, []int{1, 2, 3}, []int{res.Files[0].Index, res.Files[1].Index, res.Files[2].Index})
+		assert.Equal(t, []string{model.MediaKindImage, model.MediaKindVideo, model.MediaKindImage}, []string{
+			res.Files[0].MediaType, res.Files[1].MediaType, res.Files[2].MediaType,
+		})
+	})
+
+	t.Run("gallery-dl not-found falls back to yt-dlp", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+
+		runner := &mockRunner{
+			downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
+				p := filepath.Join(opts.OutputDir, "01_reel.mp4")
+				require.NoError(t, os.WriteFile(p, []byte("mp4"), 0o640))
+				return []model.MediaMetadata{{ID: "reel", Platform: "instagram"}}, []string{p}, nil
+			},
+		}
+		gallery := &mockGalleryRunner{
+			downloadFn: func(ctx context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+				return model.MediaMetadata{}, nil, ytdlp.ErrMediaNotFound
+			},
+		}
+
+		svc, cancel := newTestService(t, runner, gallery)
+		defer cancel()
+
+		res, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+			URL: "https://www.instagram.com/reel/abc/",
+		}, model.PlatformInstagram)
+		require.NoError(t, err)
+		assert.Equal(t, engineYTDLP, res.Engine)
+		assert.Equal(t, model.MediaKindVideo, res.MediaType)
+	})
+
+	t.Run("UPSTREAM_BLOCKED skips fallback", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+
+		ytCalled := false
+		runner := &mockRunner{
+			downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
+				ytCalled = true
+				return nil, nil, nil
+			},
+		}
+		gallery := &mockGalleryRunner{
+			downloadFn: func(ctx context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+				return model.MediaMetadata{}, nil, ytdlp.ErrUpstreamBlocked
+			},
+		}
+
+		svc, cancel := newTestService(t, runner, gallery)
+		defer cancel()
+
+		_, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+			URL: "https://www.instagram.com/p/private/",
+		}, model.PlatformInstagram)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ytdlp.ErrUpstreamBlocked)
+		assert.False(t, ytCalled)
+	})
+
+	t.Run("tiktok photo URL goes to gallery-dl first", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+
+		ytCalled := false
+		runner := &mockRunner{
+			downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
+				ytCalled = true
+				return nil, nil, nil
+			},
+		}
+		gallery := &mockGalleryRunner{
+			downloadFn: func(ctx context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+				f1 := filepath.Join(opts.OutputDir, "01.jpg")
+				f2 := filepath.Join(opts.OutputDir, "02.mp3")
+				require.NoError(t, os.WriteFile(f1, []byte("img"), 0o640))
+				require.NoError(t, os.WriteFile(f2, []byte("aud"), 0o640))
+				return model.MediaMetadata{ID: "734", Platform: "tiktok"}, []string{f1, f2}, nil
+			},
+		}
+
+		svc, cancel := newTestService(t, runner, gallery)
+		defer cancel()
+
+		res, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+			URL: "https://www.tiktok.com/@u/photo/734567890",
+		}, model.PlatformTikTok)
+		require.NoError(t, err)
+		assert.False(t, ytCalled)
+		assert.Equal(t, engineGalleryDL, res.Engine)
+		assert.Equal(t, model.MediaKindCarousel, res.MediaType)
+		assert.Equal(t, model.MediaKindImage, res.Files[0].MediaType)
+		assert.Equal(t, model.MediaKindAudio, res.Files[1].MediaType)
+	})
+
+	t.Run("tiktok unresolved url producing audio-only triggers gallery-dl image recovery", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		runner := &mockRunner{
+			downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
+				audioOnly := filepath.Join(opts.OutputDir, "01_music.mp3")
+				require.NoError(t, os.WriteFile(audioOnly, []byte("bg-music"), 0o640))
+				return []model.MediaMetadata{{ID: "tt1", Platform: "tiktok"}}, []string{audioOnly}, nil
+			},
+		}
+		gallery := &mockGalleryRunner{
+			downloadFn: func(ctx context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+				slide1 := filepath.Join(opts.OutputDir, "01.jpg")
+				slide2 := filepath.Join(opts.OutputDir, "02.jpg")
+				require.NoError(t, os.WriteFile(slide1, []byte("img1"), 0o640))
+				require.NoError(t, os.WriteFile(slide2, []byte("img2"), 0o640))
+				return model.MediaMetadata{ID: "tt1", Platform: "tiktok"}, []string{slide1, slide2}, nil
+			},
+		}
+
+		svc, cancel := newTestService(t, runner, gallery)
+		defer cancel()
+
+		res, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+			URL: "https://www.tiktok.com/@u/video/999",
+		}, model.PlatformTikTok)
+		require.NoError(t, err)
+		assert.Equal(t, engineGalleryDL, res.Engine)
+		assert.Equal(t, model.MediaKindCarousel, res.MediaType)
+		assert.Equal(t, 2, res.Count)
+	})
+
+	t.Run("soundcloud always forces audio and skips gallery-dl", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+
+		gdCalled := false
+		var capturedMediaType string
+		runner := &mockRunner{
+			downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
+				capturedMediaType = opts.MediaType
+				p := filepath.Join(opts.OutputDir, "01_track.mp3")
+				require.NoError(t, os.WriteFile(p, []byte("audio"), 0o640))
+				return []model.MediaMetadata{{ID: "sc1", Platform: "soundcloud"}}, []string{p}, nil
+			},
+		}
+		gallery := &mockGalleryRunner{
+			downloadFn: func(ctx context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+				gdCalled = true
+				return model.MediaMetadata{}, nil, nil
+			},
+		}
+
+		svc, cancel := newTestService(t, runner, gallery)
+		defer cancel()
+
+		res, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+			URL:  "https://soundcloud.com/artist/track",
+			Type: "video",
+		}, model.PlatformUnknown)
+		require.NoError(t, err)
+		assert.False(t, gdCalled)
+		assert.Equal(t, model.MediaKindAudio, capturedMediaType)
+		assert.Equal(t, model.MediaKindAudio, res.MediaType)
+		assert.Equal(t, engineYTDLP, res.Engine)
+	})
+
+	t.Run("explicit type=video forces yt-dlp on instagram", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+
+		gdCalled := false
+		var capturedMediaType string
+		runner := &mockRunner{
+			downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
+				capturedMediaType = opts.MediaType
+				p := filepath.Join(opts.OutputDir, "01_vid.mp4")
+				require.NoError(t, os.WriteFile(p, []byte("video"), 0o640))
+				return []model.MediaMetadata{{ID: "ig1", Platform: "instagram"}}, []string{p}, nil
+			},
+		}
+		gallery := &mockGalleryRunner{
+			downloadFn: func(ctx context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+				gdCalled = true
+				return model.MediaMetadata{}, nil, nil
+			},
+		}
+
+		svc, cancel := newTestService(t, runner, gallery)
+		defer cancel()
+
+		res, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+			URL:  "https://www.instagram.com/reel/abc/",
+			Type: "video",
+		}, model.PlatformInstagram)
+		require.NoError(t, err)
+		assert.False(t, gdCalled)
+		assert.Equal(t, model.MediaKindVideo, capturedMediaType)
+		assert.Equal(t, engineYTDLP, res.Engine)
+	})
+
+	t.Run("youtube default forces video and skips gallery-dl", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+
+		gdCalled := false
+		var capturedMediaType string
+		runner := &mockRunner{
+			downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
+				capturedMediaType = opts.MediaType
+				p := filepath.Join(opts.OutputDir, "01_yt.mp4")
+				require.NoError(t, os.WriteFile(p, []byte("video"), 0o640))
+				return []model.MediaMetadata{{ID: "yt1", Platform: "youtube"}}, []string{p}, nil
+			},
+		}
+		gallery := &mockGalleryRunner{
+			downloadFn: func(ctx context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+				gdCalled = true
+				return model.MediaMetadata{}, nil, nil
+			},
+		}
+
+		svc, cancel := newTestService(t, runner, gallery)
+		defer cancel()
+
+		res, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+			URL: "https://www.youtube.com/watch?v=abc",
+		}, model.PlatformUnknown)
+		require.NoError(t, err)
+		assert.False(t, gdCalled)
+		assert.Equal(t, model.MediaKindVideo, capturedMediaType)
+		assert.Equal(t, engineYTDLP, res.Engine)
+	})
 }

@@ -111,13 +111,24 @@ type SearchResult struct {
 	Platform  string  `json:"platform" example:"youtube"`
 }
 
+// MediaKind values classify downloaded files and overall post results.
+const (
+	MediaKindVideo    = "video"
+	MediaKindAudio    = "audio"
+	MediaKindImage    = "image"
+	MediaKindCarousel = "carousel"
+	MediaKindOther    = "other"
+)
+
 // DownloadedFile represents a processed media file stored temporarily for retrieval.
 type DownloadedFile struct {
+	Index       int       `json:"index" example:"1"`
+	MediaType   string    `json:"media_type" enums:"video,audio,image,other" example:"image"`
 	FileID      string    `json:"file_id" example:"f8b3a1c2-7d4e-4f1a-9b2c-123456789abc"`
-	Filename    string    `json:"filename" example:"Rick_Astley_-_Never_Gonna_Give_You_Up.mp3"`
-	Extension   string    `json:"extension" example:"mp3"`
-	MimeType    string    `json:"mime_type" example:"audio/mpeg"`
-	SizeBytes   int64     `json:"size_bytes" example:"5124300"`
+	Filename    string    `json:"filename" example:"01_item.jpg"`
+	Extension   string    `json:"extension" example:"jpg"`
+	MimeType    string    `json:"mime_type" example:"image/jpeg"`
+	SizeBytes   int64     `json:"size_bytes" example:"245100"`
 	DownloadURL string    `json:"download_url" example:"http://localhost:8080/api/v1/files/f8b3a1c2-7d4e-4f1a-9b2c-123456789abc"`
 	ExpiresAt   time.Time `json:"expires_at"`
 }

@@ -4,21 +4,30 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/justpiple/ytdlp-api/internal/config"
+	"github.com/justpiple/ytdlp-api/internal/gallerydl"
 	"github.com/justpiple/ytdlp-api/internal/job"
 	"github.com/justpiple/ytdlp-api/internal/model"
 	"github.com/justpiple/ytdlp-api/internal/storage"
 	"github.com/justpiple/ytdlp-api/internal/ytdlp"
 )
 
-// Downloader orchestrates info extraction, search, sync/stream/async downloads, and health checks.
+const (
+	engineYTDLP     = "yt-dlp"
+	engineGalleryDL = "gallery-dl"
+)
+
+// Downloader orchestrates info extraction, search, sync/async downloads, and health checks.
 type Downloader struct {
 	cfg     config.Config
 	runner  ytdlp.Runner
+	gallery gallerydl.Runner
 	storage *storage.Manager
 	jobs    *job.Manager
 
@@ -31,12 +40,14 @@ func NewDownloader(
 	rootCtx context.Context,
 	cfg config.Config,
 	runner ytdlp.Runner,
+	gallery gallerydl.Runner,
 	storageMgr *storage.Manager,
 	jobMgr *job.Manager,
 ) *Downloader {
 	return &Downloader{
 		cfg:     cfg,
 		runner:  runner,
+		gallery: gallery,
 		storage: storageMgr,
 		jobs:    jobMgr,
 		rootCtx: rootCtx,
@@ -54,6 +65,12 @@ func (d *Downloader) ExtractInfo(ctx context.Context, req model.InfoRequest) (mo
 	if err != nil {
 		return model.MediaMetadata{}, err
 	}
+
+	effectiveProxy := strings.TrimSpace(req.Proxy)
+	if effectiveProxy == "" {
+		effectiveProxy = d.cfg.ProxyURL
+	}
+	targetURL = ytdlp.ResolveShortURL(ctx, targetURL, effectiveProxy)
 
 	platform := ytdlp.DetectPlatform(targetURL)
 	runCtx, cancel := context.WithTimeout(ctx, d.cfg.InfoTimeout)
@@ -112,64 +129,23 @@ func (d *Downloader) DownloadSync(
 	if err != nil {
 		return model.DownloadResult{}, fmt.Errorf("creating temp job dir: %w", err)
 	}
-	opts.OutputDir = jobDir
 
 	runCtx, cancel := context.WithTimeout(ctx, d.cfg.DownloadTimeout)
 	defer cancel()
 
-	metaList, filePaths, err := d.runner.Download(runCtx, opts, nil)
+	engine, metaList, filePaths, err := d.fetchMedia(runCtx, jobDir, opts, nil)
 	if err != nil {
 		d.storage.RemoveDir(jobDir)
 		return model.DownloadResult{}, fmt.Errorf("downloading media: %w", err)
 	}
 
-	result, err := d.buildDownloadResult(baseURL, opts.Platform, metaList, filePaths)
+	result, err := d.buildDownloadResult(baseURL, opts.Platform, engine, metaList, filePaths)
 	if err != nil {
 		d.storage.RemoveDir(jobDir)
 		return model.DownloadResult{}, err
 	}
 
 	return result, nil
-}
-
-// DownloadForStream downloads media into a temporary directory and returns the primary file path
-// plus a cleanup callback the caller MUST defer after streaming the file.
-func (d *Downloader) DownloadForStream(
-	ctx context.Context,
-	req model.DownloadRequest,
-	expectedPlatform model.Platform,
-) (model.MediaMetadata, string, func(), error) {
-	opts, err := d.prepareDownloadOptions(ctx, req, expectedPlatform)
-	if err != nil {
-		return model.MediaMetadata{}, "", nil, err
-	}
-
-	if err := d.jobs.Acquire(ctx); err != nil {
-		return model.MediaMetadata{}, "", nil, fmt.Errorf("waiting for download slot: %w", err)
-	}
-	defer d.jobs.Release()
-
-	jobID := storage.NewID()
-	jobDir, err := d.storage.CreateJobDir(jobID)
-	if err != nil {
-		return model.MediaMetadata{}, "", nil, fmt.Errorf("creating temp job dir: %w", err)
-	}
-	cleanup := func() {
-		d.storage.RemoveDir(jobDir)
-	}
-	opts.OutputDir = jobDir
-
-	runCtx, cancel := context.WithTimeout(ctx, d.cfg.DownloadTimeout)
-	defer cancel()
-
-	metaList, filePaths, err := d.runner.Download(runCtx, opts, nil)
-	if err != nil {
-		cleanup()
-		return model.MediaMetadata{}, "", nil, fmt.Errorf("downloading stream media: %w", err)
-	}
-
-	meta := pickPrimaryMetadata(metaList, opts.Platform)
-	return meta, filePaths[0], cleanup, nil
 }
 
 // StartAsyncDownload enqueues a download job in the background and returns URLs for polling and SSE.
@@ -223,14 +199,13 @@ func (d *Downloader) runAsyncJob(jobID, baseURL string, opts ytdlp.DownloadOptio
 		})
 		return
 	}
-	opts.OutputDir = jobDir
 
 	d.jobs.Update(jobID, model.ProgressEvent{
 		Status:  model.JobStatusDownloading.String(),
 		Message: "starting download",
 	})
 
-	metaList, filePaths, err := d.runner.Download(jobCtx, opts, func(ev model.ProgressEvent) {
+	engine, metaList, filePaths, err := d.fetchMedia(jobCtx, jobDir, opts, func(ev model.ProgressEvent) {
 		d.jobs.Update(jobID, ev)
 	})
 	if err != nil {
@@ -243,7 +218,7 @@ func (d *Downloader) runAsyncJob(jobID, baseURL string, opts ytdlp.DownloadOptio
 		return
 	}
 
-	result, err := d.buildDownloadResult(baseURL, opts.Platform, metaList, filePaths)
+	result, err := d.buildDownloadResult(baseURL, opts.Platform, engine, metaList, filePaths)
 	if err != nil {
 		d.storage.RemoveDir(jobDir)
 		d.jobs.Update(jobID, model.ProgressEvent{
@@ -260,6 +235,198 @@ func (d *Downloader) runAsyncJob(jobID, baseURL string, opts ytdlp.DownloadOptio
 		Message:         "completed",
 		Result:          &result,
 	})
+}
+
+func (d *Downloader) fetchMedia(
+	ctx context.Context,
+	jobDir string,
+	opts ytdlp.DownloadOptions,
+	onProgress ytdlp.ProgressCallback,
+) (string, []model.MediaMetadata, []string, error) {
+	if opts.MediaType != "auto" || d.gallery == nil {
+		metaList, files, err := d.runYTDLP(ctx, jobDir, opts, onProgress)
+		if err != nil {
+			return "", nil, nil, err
+		}
+		return engineYTDLP, metaList, files, nil
+	}
+
+	if preferGalleryFirst(opts.Platform, opts.Target) {
+		gdMeta, gdFiles, gdErr := d.runGalleryDL(ctx, jobDir, opts, onProgress)
+		if gdErr == nil && len(gdFiles) > 0 {
+			return engineGalleryDL, []model.MediaMetadata{gdMeta}, gdFiles, nil
+		}
+		if !shouldFallback(ctx, gdErr) {
+			return "", nil, nil, gdErr
+		}
+
+		clearDirContents(jobDir)
+		ytMeta, ytFiles, ytErr := d.runYTDLP(ctx, jobDir, opts, onProgress)
+		if ytErr == nil && len(ytFiles) > 0 {
+			return engineYTDLP, ytMeta, ytFiles, nil
+		}
+		if !shouldFallback(ctx, ytErr) {
+			return "", nil, nil, ytErr
+		}
+		return "", nil, nil, gdErr
+	}
+
+	ytMeta, ytFiles, ytErr := d.runYTDLP(ctx, jobDir, opts, onProgress)
+	if ytErr == nil && len(ytFiles) > 0 {
+		// TikTok photo slideshows cause yt-dlp to download only background music without video/images.
+		// Recover images via gallery-dl when yt-dlp returns audio-only for a TikTok URL in auto mode.
+		if opts.Platform == model.PlatformTikTok && isAllAudioFiles(ytFiles) {
+			if gdMeta, gdFiles, ok := d.tryTikTokSlideshowFallback(ctx, jobDir, opts, ytFiles, onProgress); ok {
+				return engineGalleryDL, []model.MediaMetadata{gdMeta}, gdFiles, nil
+			}
+		}
+		return engineYTDLP, ytMeta, ytFiles, nil
+	}
+
+	if !shouldFallback(ctx, ytErr) {
+		return "", nil, nil, ytErr
+	}
+
+	clearDirContents(jobDir)
+	gdMeta, gdFiles, gdErr := d.runGalleryDL(ctx, jobDir, opts, onProgress)
+	if gdErr == nil && len(gdFiles) > 0 {
+		return engineGalleryDL, []model.MediaMetadata{gdMeta}, gdFiles, nil
+	}
+	if !shouldFallback(ctx, gdErr) {
+		return "", nil, nil, gdErr
+	}
+	return "", nil, nil, ytErr
+}
+
+func (d *Downloader) runYTDLP(
+	ctx context.Context,
+	outputDir string,
+	opts ytdlp.DownloadOptions,
+	onProgress ytdlp.ProgressCallback,
+) ([]model.MediaMetadata, []string, error) {
+	runOpts := opts
+	runOpts.OutputDir = outputDir
+	return d.runner.Download(ctx, runOpts, onProgress)
+}
+
+func (d *Downloader) runGalleryDL(
+	ctx context.Context,
+	outputDir string,
+	opts ytdlp.DownloadOptions,
+	onProgress ytdlp.ProgressCallback,
+) (model.MediaMetadata, []string, error) {
+	return d.gallery.Download(ctx, gallerydl.Options{
+		Target:      opts.Target,
+		Platform:    opts.Platform,
+		MaxFilesize: opts.MaxFilesize,
+		MaxItems:    d.cfg.MaxPlaylistItems,
+		Proxy:       opts.Proxy,
+		OutputDir:   outputDir,
+	}, onProgress)
+}
+
+func (d *Downloader) tryTikTokSlideshowFallback(
+	ctx context.Context,
+	jobDir string,
+	opts ytdlp.DownloadOptions,
+	ytFiles []string,
+	onProgress ytdlp.ProgressCallback,
+) (model.MediaMetadata, []string, bool) {
+	gdDir := filepath.Join(jobDir, "gd")
+	if err := os.MkdirAll(gdDir, 0o750); err != nil {
+		return model.MediaMetadata{}, nil, false
+	}
+
+	gdMeta, gdFiles, gdErr := d.runGalleryDL(ctx, gdDir, opts, onProgress)
+	if gdErr != nil || !hasAnyImageFile(gdFiles) {
+		_ = os.RemoveAll(gdDir)
+		return model.MediaMetadata{}, nil, false
+	}
+
+	moved := make([]string, 0, len(gdFiles))
+	for _, src := range gdFiles {
+		dst := filepath.Join(jobDir, "gd_"+filepath.Base(src))
+		if err := os.Rename(src, dst); err != nil {
+			_ = os.RemoveAll(gdDir)
+			for _, m := range moved {
+				_ = os.Remove(m)
+			}
+			return model.MediaMetadata{}, nil, false
+		}
+		moved = append(moved, dst)
+	}
+
+	for _, old := range ytFiles {
+		_ = os.Remove(old)
+	}
+	_ = os.RemoveAll(gdDir)
+	return gdMeta, moved, true
+}
+
+func preferGalleryFirst(platform model.Platform, target string) bool {
+	switch platform {
+	case model.PlatformInstagram, model.PlatformThreads, model.PlatformTwitter:
+		return true
+	case model.PlatformTikTok:
+		return ytdlp.IsTikTokPhotoURL(target)
+	default:
+		return false
+	}
+}
+
+func shouldFallback(ctx context.Context, err error) bool {
+	if ctx.Err() != nil {
+		return false
+	}
+	if errors.Is(err, ytdlp.ErrUpstreamBlocked) || errors.Is(err, ytdlp.ErrMediaTooLarge) {
+		return false
+	}
+	return true
+}
+
+func isAllAudioFiles(paths []string) bool {
+	if len(paths) == 0 {
+		return false
+	}
+	for _, p := range paths {
+		if classifyFilePathKind(p) != model.MediaKindAudio {
+			return false
+		}
+	}
+	return true
+}
+
+func hasAnyImageFile(paths []string) bool {
+	for _, p := range paths {
+		if classifyFilePathKind(p) == model.MediaKindImage {
+			return true
+		}
+	}
+	return false
+}
+
+func classifyFilePathKind(path string) string {
+	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
+	switch ext {
+	case "mp3", "m4a", "opus", "ogg", "wav", "aac", "flac", "weba":
+		return model.MediaKindAudio
+	case "jpg", "jpeg", "png", "webp", "gif", "heic", "avif":
+		return model.MediaKindImage
+	case "mp4", "webm", "mkv", "mov":
+		return model.MediaKindVideo
+	default:
+		return model.MediaKindOther
+	}
+}
+
+func clearDirContents(dir string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		_ = os.RemoveAll(filepath.Join(dir, entry.Name()))
+	}
 }
 
 // GetJob returns the current status snapshot of an async job.
@@ -287,20 +454,29 @@ func (d *Downloader) Health(ctx context.Context) (model.HealthResponse, error) {
 	checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ytVer, ffVer, err := d.runner.Versions(checkCtx)
+	ytVer, ffVer, ytErr := d.runner.Versions(checkCtx)
+
+	var gdVer string
+	var gdErr error
+	if d.gallery != nil {
+		gdVer, gdErr = d.gallery.Version(checkCtx)
+	}
+
+	joinedErr := errors.Join(ytErr, gdErr)
 	status := "ok"
-	if err != nil {
+	if joinedErr != nil {
 		status = "degraded"
 	}
 
 	return model.HealthResponse{
-		Status:        status,
-		YTDLPVersion:  ytVer,
-		FFmpegVersion: ffVer,
-		ActiveJobs:    d.jobs.ActiveCount(),
-		MaxConcurrent: d.jobs.MaxConcurrent(),
-		StoredFiles:   d.storage.Count(),
-	}, err
+		Status:           status,
+		YTDLPVersion:     ytVer,
+		GalleryDLVersion: gdVer,
+		FFmpegVersion:    ffVer,
+		ActiveJobs:       d.jobs.ActiveCount(),
+		MaxConcurrent:    d.jobs.MaxConcurrent(),
+		StoredFiles:      d.storage.Count(),
+	}, joinedErr
 }
 
 // SupportedPlatforms returns metadata describing all primary supported platforms.
@@ -315,25 +491,25 @@ func (d *Downloader) SupportedPlatforms() []model.PlatformCapability {
 		{
 			Name:       model.PlatformTikTok.String(),
 			Display:    "TikTok",
-			Features:   []string{"video", "audio", "carousel"},
+			Features:   []string{"auto", "video", "audio", "carousel"},
 			CookiesKey: "tiktok.txt",
 		},
 		{
 			Name:       model.PlatformInstagram.String(),
 			Display:    "Instagram",
-			Features:   []string{"video", "audio", "carousel", "reels", "stories"},
+			Features:   []string{"auto", "video", "image", "audio", "carousel", "reels", "stories"},
 			CookiesKey: "instagram.txt",
 		},
 		{
 			Name:       model.PlatformThreads.String(),
 			Display:    "Threads",
-			Features:   []string{"video", "audio", "carousel"},
+			Features:   []string{"auto", "video", "image", "audio", "carousel"},
 			CookiesKey: "threads.txt",
 		},
 		{
 			Name:       model.PlatformTwitter.String(),
 			Display:    "X (Twitter)",
-			Features:   []string{"video", "audio", "gif", "multi-video"},
+			Features:   []string{"auto", "video", "image", "audio", "gif", "carousel"},
 			CookiesKey: "twitter.txt",
 		},
 		{
@@ -345,13 +521,13 @@ func (d *Downloader) SupportedPlatforms() []model.PlatformCapability {
 		{
 			Name:       model.PlatformFacebook.String(),
 			Display:    "Facebook",
-			Features:   []string{"video", "audio", "reels"},
+			Features:   []string{"auto", "video", "image", "audio", "reels"},
 			CookiesKey: "facebook.txt",
 		},
 		{
 			Name:       model.PlatformGeneric.String(),
-			Display:    "Universal (yt-dlp supported sites)",
-			Features:   []string{"video", "audio", "info"},
+			Display:    "Universal (yt-dlp + gallery-dl supported sites)",
+			Features:   []string{"auto", "video", "audio", "image", "carousel", "info"},
 			CookiesKey: "cookies.txt",
 		},
 	}
@@ -400,23 +576,31 @@ func (d *Downloader) prepareDownloadOptions(
 		if err != nil {
 			return ytdlp.DownloadOptions{}, err
 		}
-		target = validated
-		detected := ytdlp.DetectPlatform(target)
-		if expectedPlatform != model.PlatformUnknown && expectedPlatform != model.PlatformGeneric && detected != expectedPlatform {
+		initialDetected := ytdlp.DetectPlatform(validated)
+		if expectedPlatform != model.PlatformUnknown && expectedPlatform != model.PlatformGeneric && initialDetected != expectedPlatform {
 			return ytdlp.DownloadOptions{}, fmt.Errorf(
 				"%w: expected %s url, got %s",
 				ytdlp.ErrUnsupportedPlatform,
 				expectedPlatform.String(),
-				detected.String(),
+				initialDetected.String(),
 			)
 		}
-		resolvedPlatform = detected
+
+		effectiveProxy := strings.TrimSpace(req.Proxy)
+		if effectiveProxy == "" {
+			effectiveProxy = d.cfg.ProxyURL
+		}
+		target = ytdlp.ResolveShortURL(ctx, validated, effectiveProxy)
+		resolvedPlatform = ytdlp.DetectPlatform(target)
+		if resolvedPlatform == model.PlatformUnknown {
+			resolvedPlatform = initialDetected
+		}
+		if expectedPlatform != model.PlatformUnknown && expectedPlatform != model.PlatformGeneric && resolvedPlatform == model.PlatformGeneric {
+			resolvedPlatform = expectedPlatform
+		}
 	}
 
-	mediaType := strings.ToLower(strings.TrimSpace(req.Type))
-	if mediaType != "audio" {
-		mediaType = "video"
-	}
+	mediaType := resolveMediaType(req.Type, resolvedPlatform)
 
 	h264Compat := true
 	if req.H264Compatible != nil {
@@ -441,21 +625,42 @@ func (d *Downloader) prepareDownloadOptions(
 	}, nil
 }
 
+func resolveMediaType(requested string, platform model.Platform) string {
+	mediaType := strings.ToLower(strings.TrimSpace(requested))
+	switch {
+	case platform == model.PlatformSoundCloud:
+		return model.MediaKindAudio
+	case platform == model.PlatformYouTube:
+		if mediaType == model.MediaKindAudio {
+			return model.MediaKindAudio
+		}
+		return model.MediaKindVideo
+	default:
+		if mediaType == "" {
+			return "auto"
+		}
+		return mediaType
+	}
+}
+
 func (d *Downloader) buildDownloadResult(
 	baseURL string,
 	platform model.Platform,
+	engine string,
 	metaList []model.MediaMetadata,
 	filePaths []string,
 ) (model.DownloadResult, error) {
 	cleanBase := strings.TrimRight(baseURL, "/")
 	files := make([]model.DownloadedFile, 0, len(filePaths))
 
-	for _, path := range filePaths {
+	for i, path := range filePaths {
 		stored, err := d.storage.RegisterFile(path)
 		if err != nil {
 			return model.DownloadResult{}, fmt.Errorf("registering file %q: %w", path, err)
 		}
 		files = append(files, model.DownloadedFile{
+			Index:       i + 1,
+			MediaType:   storage.MediaKindFromMIME(stored.MimeType),
 			FileID:      stored.ID,
 			Filename:    stored.Filename,
 			Extension:   stored.Extension,
@@ -468,10 +673,23 @@ func (d *Downloader) buildDownloadResult(
 
 	meta := pickPrimaryMetadata(metaList, platform)
 	return model.DownloadResult{
-		Platform: platform.String(),
-		Metadata: meta,
-		Files:    files,
+		Platform:  platform.String(),
+		MediaType: summarizeResultMediaType(files),
+		Count:     len(files),
+		Engine:    engine,
+		Metadata:  meta,
+		Files:     files,
 	}, nil
+}
+
+func summarizeResultMediaType(files []model.DownloadedFile) string {
+	if len(files) > 1 {
+		return model.MediaKindCarousel
+	}
+	if len(files) == 1 {
+		return files[0].MediaType
+	}
+	return model.MediaKindOther
 }
 
 func pickPrimaryMetadata(metaList []model.MediaMetadata, platform model.Platform) model.MediaMetadata {

@@ -3,7 +3,6 @@ package handler
 import (
 	"log/slog"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -60,7 +59,7 @@ func (h *UnifiedHandler) Info(c *gin.Context) {
 
 // Download godoc
 // @Summary      Universal media download
-// @Description  Auto-detects the platform from URL (YouTube, TikTok, Instagram, Threads, X, SoundCloud, Facebook, and 1000+ yt-dlp sites) and downloads video or audio. Supports response_mode: url (default), stream, or async.
+// @Description  Auto-detects platform and media type (video, audio, image, or carousel) from URL for non-YouTube sources; SoundCloud stays audio-only. Supports response_mode: url (default) or async.
 // @Tags         unified
 // @Accept       json
 // @Produce      json
@@ -129,6 +128,11 @@ func executeDownload(
 	req model.DownloadRequest,
 	expectedPlatform model.Platform,
 ) {
+	if !isValidDownloadType(req.Type) {
+		writeError(c, http.StatusBadRequest, "INVALID_REQUEST", "type must be auto, video, or audio")
+		return
+	}
+
 	baseURL := resolveBaseURL(c, cfg.BaseURL)
 	mode := strings.ToLower(strings.TrimSpace(req.ResponseMode))
 
@@ -141,19 +145,6 @@ func executeDownload(
 		}
 		writeSuccess(c, http.StatusAccepted, accepted)
 
-	case "stream":
-		meta, filePath, cleanup, err := svc.DownloadForStream(c.Request.Context(), req, expectedPlatform)
-		if err != nil {
-			handleServiceError(c, logger, err)
-			return
-		}
-		defer cleanup()
-
-		filename := filepath.Base(filePath)
-		c.Header("X-Media-Title", meta.Title)
-		c.Header("X-Media-Platform", meta.Platform)
-		c.FileAttachment(filePath, filename)
-
 	case "", "url":
 		result, err := svc.DownloadSync(c.Request.Context(), baseURL, req, expectedPlatform)
 		if err != nil {
@@ -163,7 +154,16 @@ func executeDownload(
 		writeSuccess(c, http.StatusOK, result)
 
 	default:
-		writeError(c, http.StatusBadRequest, "INVALID_REQUEST", "response_mode must be url, stream, or async")
+		writeError(c, http.StatusBadRequest, "INVALID_REQUEST", "response_mode must be url or async")
+	}
+}
+
+func isValidDownloadType(raw string) bool {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "", "auto", "video", "audio":
+		return true
+	default:
+		return false
 	}
 }
 

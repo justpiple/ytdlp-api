@@ -126,7 +126,7 @@ func (h *PlatformHandler) YouTubeAudio(c *gin.Context) {
 
 // TikTokDownload godoc
 // @Summary      Download TikTok media
-// @Description  Downloads TikTok video (watermark-free when available), audio, or multi-slide items.
+// @Description  Auto-detects TikTok video vs photo slideshow (expanding short links like vt.tiktok.com), or forces video/audio when type is specified.
 // @Tags         tiktok
 // @Accept       json
 // @Produce      json
@@ -157,7 +157,7 @@ func (h *PlatformHandler) TikTokDownload(c *gin.Context) {
 
 // InstagramDownload godoc
 // @Summary      Download Instagram media
-// @Description  Downloads Instagram Reels, Posts, Carousels, or Stories (supports cookies/instagram.txt).
+// @Description  Auto-detects and downloads Instagram Reels, Videos, Photos, Carousels, or Stories (supports cookies/instagram.txt).
 // @Tags         instagram
 // @Accept       json
 // @Produce      json
@@ -173,7 +173,7 @@ func (h *PlatformHandler) InstagramDownload(c *gin.Context) {
 
 // ThreadsDownload godoc
 // @Summary      Download Threads media
-// @Description  Downloads Threads videos and carousel posts.
+// @Description  Auto-detects and downloads Threads videos, photos, and carousel posts.
 // @Tags         threads
 // @Accept       json
 // @Produce      json
@@ -189,7 +189,7 @@ func (h *PlatformHandler) ThreadsDownload(c *gin.Context) {
 
 // TwitterDownload godoc
 // @Summary      Download X (Twitter) media
-// @Description  Downloads videos, GIFs, and multi-video posts from X / Twitter.
+// @Description  Auto-detects and downloads X / Twitter videos, GIFs, images, and multi-item posts.
 // @Tags         twitter
 // @Accept       json
 // @Produce      json
@@ -293,6 +293,7 @@ func (h *PlatformHandler) handleSocialMedia(c *gin.Context, platform model.Platf
 		URL:            req.URL,
 		Type:           req.Type,
 		Quality:        req.Quality,
+		AudioFormat:    req.AudioFormat,
 		ResponseMode:   req.ResponseMode,
 		H264Compatible: req.H264Compatible,
 		MaxFilesize:    req.MaxFilesize,

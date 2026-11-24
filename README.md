@@ -1,6 +1,6 @@
 # yt-dlp Media Downloader & Search API
 
-A lightweight **Go + Gin** REST API wrapping [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) and `ffmpeg` for extracting metadata, searching tracks/videos, and downloading media across major platforms. Designed for private/internal Docker deployments without authentication.
+A lightweight **Go + Gin** REST API wrapping [`yt-dlp`](https://github.com/yt-dlp/yt-dlp), [`gallery-dl`](https://github.com/mikf/gallery-dl), and `ffmpeg` for extracting metadata, searching tracks/videos, and auto-downloading videos, audio, photos, and carousels across major platforms. Designed for private/internal Docker deployments without authentication.
 
 > **API Reference:** See [API.md](API.md) for endpoints and examples, or open `/swagger/index.html` when running.
 
@@ -12,12 +12,12 @@ A lightweight **Go + Gin** REST API wrapping [`yt-dlp`](https://github.com/yt-dl
 | :--- | :--- | :--- |
 | **YouTube** | Video, Audio, Search | `/api/v1/youtube/{search,video,audio}` |
 | **TikTok** | Video, Audio, Carousel | `/api/v1/tiktok/download` |
-| **Instagram** | Reels, Posts, Carousels, Stories | `/api/v1/instagram/download` |
-| **Threads** | Video, Image / Carousel | `/api/v1/threads/download` |
-| **X (Twitter)** | Video, GIF, Multi-video | `/api/v1/twitter/download` |
-| **SoundCloud** | Search, Audio | `/api/v1/soundcloud/{search,download}` |
-| **Facebook** | Reels, Watch, Public Video | `/api/v1/facebook/download` |
-| **Universal** | Auto-detect + [1,000+ `yt-dlp` sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) | `/api/v1/{info,download,search}` |
+| **Instagram** | Reels, Videos, Photos, Carousels, Stories | `/api/v1/instagram/download` |
+| **Threads** | Video, Image, Carousel | `/api/v1/threads/download` |
+| **X (Twitter)** | Video, GIF, Images, Multi-item | `/api/v1/twitter/download` |
+| **SoundCloud** | Search, Audio-only | `/api/v1/soundcloud/{search,download}` |
+| **Facebook** | Reels, Watch, Public Video/Image | `/api/v1/facebook/download` |
+| **Universal** | Auto-detect + [1,000+ `yt-dlp`](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) / [`gallery-dl`](https://github.com/mikf/gallery-dl/blob/master/docs/supportedsites.md) sites | `/api/v1/{info,download,search}` |
 
 ---
 
@@ -42,7 +42,7 @@ docker run -d --name ytdlp-api \
 
 ### Local Development
 
-Requires **Go 1.26+**, `yt-dlp`, `ffmpeg`, and `deno`.
+Requires **Go 1.26+**, `yt-dlp`, `gallery-dl`, `ffmpeg`, and `deno`.
 
 ```bash
 make swag        # Regenerate Swagger specs in docs/
@@ -63,6 +63,9 @@ Configure via `.env` or environment variables (see [`.env.example`](.env.example
 | `BASE_URL` | `""` | Base URL for generated `download_url` links (auto-detected if empty) |
 | `LOG_LEVEL` | `info` | JSON log level (`debug`, `info`, `warn`, `error`) |
 | `PROXY_URL` | `""` | Default upstream proxy (`http://...` or `socks5://...`) |
+| `YTDLP_PATH` | `yt-dlp` | Path or command name for `yt-dlp` |
+| `GALLERYDL_PATH` | `gallery-dl` | Path or command name for `gallery-dl` |
+| `FFMPEG_PATH` | `ffmpeg` | Path or command name for `ffmpeg` |
 | `COOKIES_FILE` | `""` | Fallback global Netscape `cookies.txt` path |
 | `COOKIES_DIR` | `./cookies` | Directory for per-platform cookies (e.g. `instagram.txt`, `youtube.txt`) |
 | `TEMP_DIR` | `/tmp/ytdlp-api` | Temporary storage path for downloaded files |

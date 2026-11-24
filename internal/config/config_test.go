@@ -79,6 +79,7 @@ func TestLoad(t *testing.T) {
 			is.Equal(tt.wantProxy, cfg.ProxyURL)
 			is.Equal(tt.wantTTL, cfg.FileTTL)
 			is.Equal(tt.wantConc, cfg.MaxConcurrentDownloads)
+			is.NotEmpty(cfg.GalleryDLPath)
 			if tt.env["BASE_URL"] != "" {
 				is.Equal("http://ytdlp.internal:9090", cfg.BaseURL)
 			}

@@ -67,6 +67,7 @@ jobs:
           echo ""
           curl -fsS -o /dev/null -w "swagger_http_code=%{http_code}\n" http://localhost:18080/swagger/index.html
           docker exec "$CID" yt-dlp --version
+          docker exec "$CID" gallery-dl --version
 
       - name: Log in to GitHub Container Registry
         if: github.event_name != 'pull_request'

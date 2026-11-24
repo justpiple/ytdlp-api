@@ -213,6 +213,8 @@ func detectMimeType(ext string) string {
 		return "video/webm"
 	case "mkv":
 		return "video/x-matroska"
+	case "mov":
+		return "video/quicktime"
 	case "mp3":
 		return "audio/mpeg"
 	case "m4a":
@@ -229,10 +231,31 @@ func detectMimeType(ext string) string {
 		return "image/png"
 	case "webp":
 		return "image/webp"
+	case "gif":
+		return "image/gif"
+	case "heic":
+		return "image/heic"
+	case "avif":
+		return "image/avif"
 	default:
 		if mt := mime.TypeByExtension("." + ext); mt != "" {
 			return mt
 		}
 		return "application/octet-stream"
+	}
+}
+
+// MediaKindFromMIME maps a MIME type string to a high-level media kind ("video", "audio", "image", or "other").
+func MediaKindFromMIME(mimeType string) string {
+	lower := strings.ToLower(strings.TrimSpace(mimeType))
+	switch {
+	case strings.HasPrefix(lower, "video/"):
+		return "video"
+	case strings.HasPrefix(lower, "audio/"):
+		return "audio"
+	case strings.HasPrefix(lower, "image/"):
+		return "image"
+	default:
+		return "other"
 	}
 }

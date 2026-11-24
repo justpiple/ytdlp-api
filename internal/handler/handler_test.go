@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/justpiple/ytdlp-api/internal/config"
+	"github.com/justpiple/ytdlp-api/internal/gallerydl"
 	"github.com/justpiple/ytdlp-api/internal/job"
 	"github.com/justpiple/ytdlp-api/internal/model"
 	"github.com/justpiple/ytdlp-api/internal/service"
@@ -76,7 +77,32 @@ func (m *handlerMockRunner) Versions(_ context.Context) (string, string, error) 
 	return "2025.01.15", "ffmpeg version 6.1", nil
 }
 
-func setupTestRouter(t *testing.T) (http.Handler, *service.Downloader, context.CancelFunc) {
+type handlerMockGalleryRunner struct {
+	called bool
+}
+
+func (m *handlerMockGalleryRunner) Download(_ context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+	m.called = true
+	f1 := filepath.Join(opts.OutputDir, "01_slide.jpg")
+	f2 := filepath.Join(opts.OutputDir, "02_slide.mp4")
+	if err := os.WriteFile(f1, []byte("img-bytes"), 0o640); err != nil {
+		return model.MediaMetadata{}, nil, err
+	}
+	if err := os.WriteFile(f2, []byte("vid-bytes"), 0o640); err != nil {
+		return model.MediaMetadata{}, nil, err
+	}
+	return model.MediaMetadata{
+		ID:       "carousel-1",
+		Title:    "Carousel Post",
+		Platform: opts.Platform.String(),
+	}, []string{f1, f2}, nil
+}
+
+func (m *handlerMockGalleryRunner) Version(_ context.Context) (string, error) {
+	return "1.32.21", nil
+}
+
+func setupTestRouter(t *testing.T) (http.Handler, *service.Downloader, *handlerMockGalleryRunner, context.CancelFunc) {
 	t.Helper()
 	cfg := config.Config{
 		GinMode:                "test",
@@ -92,10 +118,11 @@ func setupTestRouter(t *testing.T) (http.Handler, *service.Downloader, context.C
 	require.NoError(t, err)
 	jobMgr := job.NewManager(cfg.MaxConcurrentDownloads)
 	rootCtx, cancel := context.WithCancel(t.Context())
-	svc := service.NewDownloader(rootCtx, cfg, &handlerMockRunner{}, store, jobMgr)
+	galleryMock := &handlerMockGalleryRunner{}
+	svc := service.NewDownloader(rootCtx, cfg, &handlerMockRunner{}, galleryMock, store, jobMgr)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
-	return NewRouter(cfg, svc, logger), svc, cancel
+	return NewRouter(cfg, svc, logger), svc, galleryMock, cancel
 }
 
 type testAPIResponse[T any] struct {
@@ -105,7 +132,7 @@ type testAPIResponse[T any] struct {
 }
 
 func TestSystemEndpoints(t *testing.T) {
-	router, _, cancel := setupTestRouter(t)
+	router, _, _, cancel := setupTestRouter(t)
 	defer cancel()
 
 	t.Run("healthz", func(t *testing.T) {
@@ -118,6 +145,7 @@ func TestSystemEndpoints(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 		assert.True(t, resp.Success)
 		assert.Equal(t, "2025.01.15", resp.Data.YTDLPVersion)
+		assert.Equal(t, "1.32.21", resp.Data.GalleryDLVersion)
 	})
 
 	t.Run("platforms list", func(t *testing.T) {
@@ -133,7 +161,7 @@ func TestSystemEndpoints(t *testing.T) {
 }
 
 func TestUnifiedAndPlatformEndpoints(t *testing.T) {
-	router, _, cancel := setupTestRouter(t)
+	router, _, _, cancel := setupTestRouter(t)
 	defer cancel()
 
 	tests := []struct {
@@ -259,7 +287,7 @@ func TestUnifiedAndPlatformEndpoints(t *testing.T) {
 }
 
 func TestDownloadAndDeleteAfter(t *testing.T) {
-	router, _, cancel := setupTestRouter(t)
+	router, _, _, cancel := setupTestRouter(t)
 	defer cancel()
 
 	req := httptest.NewRequest(
@@ -292,26 +320,92 @@ func TestDownloadAndDeleteAfter(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, dlRec2.Code)
 }
 
-func TestStreamMode(t *testing.T) {
-	router, _, cancel := setupTestRouter(t)
-	defer cancel()
+func TestCarouselAutoDetectAndValidation(t *testing.T) {
+	t.Run("instagram carousel returns typed ordered files", func(t *testing.T) {
+		router, _, galleryMock, cancel := setupTestRouter(t)
+		defer cancel()
 
-	req := httptest.NewRequest(
-		http.MethodPost,
-		"/api/v1/download",
-		bytes.NewBufferString(`{"url":"https://x.com/user/status/123","response_mode":"stream"}`),
-	)
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
+		req := httptest.NewRequest(
+			http.MethodPost,
+			"/api/v1/instagram/download",
+			bytes.NewBufferString(`{"url":"https://www.instagram.com/p/C0abc/"}`),
+		)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Equal(t, "binary-payload", rec.Body.String())
-	assert.Contains(t, rec.Header().Get("Content-Disposition"), "attachment")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.True(t, galleryMock.called)
+
+		var resp testAPIResponse[model.DownloadResult]
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		assert.Equal(t, model.MediaKindCarousel, resp.Data.MediaType)
+		assert.Equal(t, 2, resp.Data.Count)
+		assert.Equal(t, "gallery-dl", resp.Data.Engine)
+		require.Len(t, resp.Data.Files, 2)
+		assert.Equal(t, 1, resp.Data.Files[0].Index)
+		assert.Equal(t, model.MediaKindImage, resp.Data.Files[0].MediaType)
+		assert.Equal(t, 2, resp.Data.Files[1].Index)
+		assert.Equal(t, model.MediaKindVideo, resp.Data.Files[1].MediaType)
+	})
+
+	t.Run("soundcloud via unified /download returns audio only without gallery-dl", func(t *testing.T) {
+		router, _, galleryMock, cancel := setupTestRouter(t)
+		defer cancel()
+
+		req := httptest.NewRequest(
+			http.MethodPost,
+			"/api/v1/download",
+			bytes.NewBufferString(`{"url":"https://soundcloud.com/artist/track"}`),
+		)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.False(t, galleryMock.called)
+
+		var resp testAPIResponse[model.DownloadResult]
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		assert.Equal(t, model.MediaKindAudio, resp.Data.MediaType)
+		assert.Equal(t, "yt-dlp", resp.Data.Engine)
+	})
+
+	t.Run("stream response_mode rejected with 400", func(t *testing.T) {
+		router, _, _, cancel := setupTestRouter(t)
+		defer cancel()
+
+		req := httptest.NewRequest(
+			http.MethodPost,
+			"/api/v1/download",
+			bytes.NewBufferString(`{"url":"https://x.com/user/status/123","response_mode":"stream"}`),
+		)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("invalid type rejected with 400", func(t *testing.T) {
+		router, _, _, cancel := setupTestRouter(t)
+		defer cancel()
+
+		req := httptest.NewRequest(
+			http.MethodPost,
+			"/api/v1/instagram/download",
+			bytes.NewBufferString(`{"url":"https://www.instagram.com/p/C0abc/","type":"image"}`),
+		)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
 }
 
 func TestAsyncJobAndSSE(t *testing.T) {
-	router, svc, cancel := setupTestRouter(t)
+	router, svc, _, cancel := setupTestRouter(t)
 	defer cancel()
 
 	req := httptest.NewRequest(

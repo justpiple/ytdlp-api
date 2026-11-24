@@ -9,11 +9,11 @@ type InfoRequest struct {
 
 // DownloadRequest represents a unified or platform-specific media download request.
 type DownloadRequest struct {
-	URL            string `json:"url" binding:"required" example:"https://www.youtube.com/watch?v=dQw4w9WgXcQ"`
-	Type           string `json:"type,omitempty" enums:"video,audio" example:"video"`
+	URL            string `json:"url" binding:"required" example:"https://www.instagram.com/p/C0000000000/"`
+	Type           string `json:"type,omitempty" enums:"auto,video,audio" example:"auto"`
 	Quality        string `json:"quality,omitempty" enums:"best,1080p,720p,480p,360p,worst" example:"720p"`
 	AudioFormat    string `json:"audio_format,omitempty" enums:"mp3,m4a,opus,wav" example:"mp3"`
-	ResponseMode   string `json:"response_mode,omitempty" enums:"url,stream,async" example:"url"`
+	ResponseMode   string `json:"response_mode,omitempty" enums:"url,async" example:"url"`
 	H264Compatible *bool  `json:"h264_compatible,omitempty" example:"true"`
 	EmbedThumbnail *bool  `json:"embed_thumbnail,omitempty" example:"true"`
 	IsSearch       bool   `json:"is_search,omitempty" example:"false"`
@@ -25,7 +25,7 @@ type DownloadRequest struct {
 type YouTubeVideoRequest struct {
 	URL            string `json:"url" binding:"required" example:"https://www.youtube.com/watch?v=dQw4w9WgXcQ"`
 	Quality        string `json:"quality,omitempty" enums:"best,1080p,720p,480p,360p,worst" example:"720p"`
-	ResponseMode   string `json:"response_mode,omitempty" enums:"url,stream,async" example:"url"`
+	ResponseMode   string `json:"response_mode,omitempty" enums:"url,async" example:"url"`
 	H264Compatible *bool  `json:"h264_compatible,omitempty" example:"true"`
 	MaxFilesize    string `json:"max_filesize,omitempty" example:"100M"`
 	Proxy          string `json:"proxy,omitempty"`
@@ -36,19 +36,19 @@ type YouTubeVideoRequest struct {
 type YouTubeAudioRequest struct {
 	URL            string `json:"url" binding:"required" example:"https://www.youtube.com/watch?v=dQw4w9WgXcQ"`
 	AudioFormat    string `json:"audio_format,omitempty" enums:"mp3,m4a,opus,wav" example:"mp3"`
-	ResponseMode   string `json:"response_mode,omitempty" enums:"url,stream,async" example:"url"`
+	ResponseMode   string `json:"response_mode,omitempty" enums:"url,async" example:"url"`
 	EmbedThumbnail *bool  `json:"embed_thumbnail,omitempty" example:"true"`
 	IsSearch       bool   `json:"is_search,omitempty" example:"false"`
 	MaxFilesize    string `json:"max_filesize,omitempty" example:"100M"`
 	Proxy          string `json:"proxy,omitempty"`
 }
 
-// TikTokDownloadRequest represents a TikTok video/audio/slide download request (!tiktok).
+// TikTokDownloadRequest represents a TikTok video, audio, or photo slideshow download request.
 type TikTokDownloadRequest struct {
 	URL            string `json:"url" binding:"required" example:"https://www.tiktok.com/@tiktok/video/7106594312292453675"`
-	Type           string `json:"type,omitempty" enums:"video,audio" example:"video"`
+	Type           string `json:"type,omitempty" enums:"auto,video,audio" example:"auto"`
 	AudioFormat    string `json:"audio_format,omitempty" enums:"mp3,m4a,opus" example:"mp3"`
-	ResponseMode   string `json:"response_mode,omitempty" enums:"url,stream,async" example:"url"`
+	ResponseMode   string `json:"response_mode,omitempty" enums:"url,async" example:"url"`
 	H264Compatible *bool  `json:"h264_compatible,omitempty" example:"true"`
 	MaxFilesize    string `json:"max_filesize,omitempty"`
 	Proxy          string `json:"proxy,omitempty"`
@@ -57,9 +57,10 @@ type TikTokDownloadRequest struct {
 // SocialMediaRequest represents a download request for Instagram, Threads, X/Twitter, or Facebook.
 type SocialMediaRequest struct {
 	URL            string `json:"url" binding:"required" example:"https://www.instagram.com/reel/C0000000000/"`
-	Type           string `json:"type,omitempty" enums:"video,audio" example:"video"`
+	Type           string `json:"type,omitempty" enums:"auto,video,audio" example:"auto"`
 	Quality        string `json:"quality,omitempty" enums:"best,1080p,720p,480p,360p" example:"720p"`
-	ResponseMode   string `json:"response_mode,omitempty" enums:"url,stream,async" example:"url"`
+	AudioFormat    string `json:"audio_format,omitempty" enums:"mp3,m4a,opus,wav" example:"mp3"`
+	ResponseMode   string `json:"response_mode,omitempty" enums:"url,async" example:"url"`
 	H264Compatible *bool  `json:"h264_compatible,omitempty" example:"true"`
 	MaxFilesize    string `json:"max_filesize,omitempty"`
 	Proxy          string `json:"proxy,omitempty"`
@@ -70,7 +71,7 @@ type SocialMediaRequest struct {
 type SoundCloudDownloadRequest struct {
 	URL            string `json:"url" binding:"required" example:"https://soundcloud.com/artist/track"`
 	AudioFormat    string `json:"audio_format,omitempty" enums:"mp3,m4a,opus,wav" example:"mp3"`
-	ResponseMode   string `json:"response_mode,omitempty" enums:"url,stream,async" example:"url"`
+	ResponseMode   string `json:"response_mode,omitempty" enums:"url,async" example:"url"`
 	EmbedThumbnail *bool  `json:"embed_thumbnail,omitempty" example:"true"`
 	IsSearch       bool   `json:"is_search,omitempty" example:"false"`
 	MaxFilesize    string `json:"max_filesize,omitempty"`

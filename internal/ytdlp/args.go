@@ -115,7 +115,12 @@ func BuildDownloadArgs(cfg config.Config, opts DownloadOptions) []string {
 			args = append(args, "--embed-thumbnail", "--convert-thumbnails", "jpg")
 		}
 	} else {
-		formatSelector := videoFormatSelector(opts.Quality, opts.H264Compatible)
+		var formatSelector string
+		if opts.MediaType == model.MediaKindOther || opts.MediaType == "auto" {
+			formatSelector = adaptiveFormatSelector(opts.Quality, opts.H264Compatible)
+		} else {
+			formatSelector = videoFormatSelector(opts.Quality, opts.H264Compatible)
+		}
 		args = append(args, "-f", formatSelector)
 		if opts.H264Compatible {
 			// Prefer H.264 (avc1) + AAC (m4a) for universal inline playback across mobile and web players.
@@ -147,7 +152,7 @@ func baseArgs(cfg config.Config, platform model.Platform, proxyOverride string) 
 		args = append(args, "--proxy", proxy)
 	}
 
-	if cookiePath := resolveCookiesFile(cfg, platform); cookiePath != "" {
+	if cookiePath := ResolveCookiesFile(cfg, platform); cookiePath != "" {
 		args = append(args, "--cookies", cookiePath)
 	}
 
@@ -172,7 +177,9 @@ func resolveFFmpegLocation(ffmpegPath string) string {
 	return trimmed
 }
 
-func resolveCookiesFile(cfg config.Config, platform model.Platform) string {
+// ResolveCookiesFile finds the most specific Netscape cookies file for platform,
+// falling back to cfg.CookiesFile if no platform file exists.
+func ResolveCookiesFile(cfg config.Config, platform model.Platform) string {
 	if cfg.CookiesDir != "" && platform != model.PlatformUnknown && platform != model.PlatformGeneric {
 		candidate := filepath.Join(cfg.CookiesDir, platform.String()+".txt")
 		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
@@ -236,4 +243,8 @@ func videoFormatSelector(quality string, h264Compatible bool) string {
 		return "bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo+bestaudio/best"
 	}
 	return "bestvideo+bestaudio/best"
+}
+
+func adaptiveFormatSelector(quality string, h264Compatible bool) string {
+	return videoFormatSelector(quality, h264Compatible) + "/bestaudio/best"
 }

@@ -14,6 +14,7 @@ import (
 
 	_ "github.com/justpiple/ytdlp-api/docs"
 	"github.com/justpiple/ytdlp-api/internal/config"
+	"github.com/justpiple/ytdlp-api/internal/gallerydl"
 	"github.com/justpiple/ytdlp-api/internal/handler"
 	"github.com/justpiple/ytdlp-api/internal/job"
 	"github.com/justpiple/ytdlp-api/internal/service"
@@ -51,7 +52,8 @@ func run() error {
 
 	jobMgr := job.NewManager(cfg.MaxConcurrentDownloads)
 	runner := ytdlp.NewExecRunner(cfg)
-	svc := service.NewDownloader(rootCtx, cfg, runner, storageMgr, jobMgr)
+	galleryRunner := gallerydl.NewExecRunner(cfg)
+	svc := service.NewDownloader(rootCtx, cfg, runner, galleryRunner, storageMgr, jobMgr)
 
 	var workersWG sync.WaitGroup
 	workersWG.Add(2)

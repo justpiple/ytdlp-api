@@ -48,6 +48,7 @@ ENV PORT=8080 \
     LOG_LEVEL=info \
     YTDLP_PATH=yt-dlp \
     FFMPEG_PATH=ffmpeg \
+    GALLERYDL_PATH=gallery-dl \
     PROXY_URL="" \
     COOKIES_FILE="" \
     COOKIES_DIR=/app/cookies \

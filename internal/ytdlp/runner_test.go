@@ -126,6 +126,21 @@ func TestBuildDownloadArgs(t *testing.T) {
 		is.Contains(args, "mp3")
 		is.Contains(args, "--embed-thumbnail")
 	})
+
+	t.Run("auto mode uses adaptive format selector with audio fallback", func(t *testing.T) {
+		is := assert.New(t)
+		args := BuildDownloadArgs(cfg, DownloadOptions{
+			Target:         "https://www.instagram.com/p/abc/",
+			Platform:       model.PlatformInstagram,
+			MediaType:      "auto",
+			Quality:        "720p",
+			H264Compatible: true,
+			OutputDir:      "/tmp/out",
+		})
+
+		is.Contains(args, "bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best/bestaudio/best")
+		is.Contains(args, "--merge-output-format")
+	})
 }
 
 func TestResolveFFmpegLocation(t *testing.T) {

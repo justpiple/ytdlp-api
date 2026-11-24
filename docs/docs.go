@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/download": {
             "post": {
-                "description": "Auto-detects the platform from URL (YouTube, TikTok, Instagram, Threads, X, SoundCloud, Facebook, and 1000+ yt-dlp sites) and downloads video or audio. Supports response_mode: url (default), stream, or async.",
+                "description": "Auto-detects platform and media type (video, audio, image, or carousel) from URL for non-YouTube sources; SoundCloud stays audio-only. Supports response_mode: url (default) or async.",
                 "consumes": [
                     "application/json"
                 ],
@@ -268,7 +268,7 @@ const docTemplate = `{
         },
         "/healthz": {
             "get": {
-                "description": "Checks API readiness, yt-dlp/ffmpeg binary availability, active concurrency, and temp file count.",
+                "description": "Checks API readiness, yt-dlp/gallery-dl/ffmpeg binary availability, active concurrency, and temp file count.",
                 "produces": [
                     "application/json"
                 ],
@@ -382,7 +382,7 @@ const docTemplate = `{
         },
         "/instagram/download": {
             "post": {
-                "description": "Downloads Instagram Reels, Posts, Carousels, or Stories (supports cookies/instagram.txt).",
+                "description": "Auto-detects and downloads Instagram Reels, Videos, Photos, Carousels, or Stories (supports cookies/instagram.txt).",
                 "consumes": [
                     "application/json"
                 ],
@@ -794,7 +794,7 @@ const docTemplate = `{
         },
         "/threads/download": {
             "post": {
-                "description": "Downloads Threads videos and carousel posts.",
+                "description": "Auto-detects and downloads Threads videos, photos, and carousel posts.",
                 "consumes": [
                     "application/json"
                 ],
@@ -870,7 +870,7 @@ const docTemplate = `{
         },
         "/tiktok/download": {
             "post": {
-                "description": "Downloads TikTok video (watermark-free when available), audio, or multi-slide items.",
+                "description": "Auto-detects TikTok video vs photo slideshow (expanding short links like vt.tiktok.com), or forces video/audio when type is specified.",
                 "consumes": [
                     "application/json"
                 ],
@@ -946,7 +946,7 @@ const docTemplate = `{
         },
         "/twitter/download": {
             "post": {
-                "description": "Downloads videos, GIFs, and multi-video posts from X / Twitter.",
+                "description": "Auto-detects and downloads X / Twitter videos, GIFs, images, and multi-item posts.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1327,7 +1327,6 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "url",
-                        "stream",
                         "async"
                     ],
                     "example": "url"
@@ -1335,32 +1334,55 @@ const docTemplate = `{
                 "type": {
                     "type": "string",
                     "enum": [
+                        "auto",
                         "video",
                         "audio"
                     ],
-                    "example": "video"
+                    "example": "auto"
                 },
                 "url": {
                     "type": "string",
-                    "example": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                    "example": "https://www.instagram.com/p/C0000000000/"
                 }
             }
         },
         "model.DownloadResult": {
             "type": "object",
             "properties": {
+                "count": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "engine": {
+                    "type": "string",
+                    "enum": [
+                        "yt-dlp",
+                        "gallery-dl"
+                    ],
+                    "example": "gallery-dl"
+                },
                 "files": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.DownloadedFile"
                     }
                 },
+                "media_type": {
+                    "type": "string",
+                    "enum": [
+                        "video",
+                        "audio",
+                        "image",
+                        "carousel"
+                    ],
+                    "example": "carousel"
+                },
                 "metadata": {
                     "$ref": "#/definitions/model.MediaMetadata"
                 },
                 "platform": {
                     "type": "string",
-                    "example": "youtube"
+                    "example": "instagram"
                 }
             }
         },
@@ -1376,7 +1398,7 @@ const docTemplate = `{
                 },
                 "extension": {
                     "type": "string",
-                    "example": "mp3"
+                    "example": "jpg"
                 },
                 "file_id": {
                     "type": "string",
@@ -1384,15 +1406,29 @@ const docTemplate = `{
                 },
                 "filename": {
                     "type": "string",
-                    "example": "Rick_Astley_-_Never_Gonna_Give_You_Up.mp3"
+                    "example": "01_item.jpg"
+                },
+                "index": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "media_type": {
+                    "type": "string",
+                    "enum": [
+                        "video",
+                        "audio",
+                        "image",
+                        "other"
+                    ],
+                    "example": "image"
                 },
                 "mime_type": {
                     "type": "string",
-                    "example": "audio/mpeg"
+                    "example": "image/jpeg"
                 },
                 "size_bytes": {
                     "type": "integer",
-                    "example": 5124300
+                    "example": 245100
                 }
             }
         },
@@ -1479,6 +1515,10 @@ const docTemplate = `{
                 "ffmpeg_version": {
                     "type": "string",
                     "example": "ffmpeg version 6.1.1"
+                },
+                "gallerydl_version": {
+                    "type": "string",
+                    "example": "1.32.21"
                 },
                 "max_concurrent": {
                     "type": "integer",
@@ -1739,6 +1779,16 @@ const docTemplate = `{
                 "url"
             ],
             "properties": {
+                "audio_format": {
+                    "type": "string",
+                    "enum": [
+                        "mp3",
+                        "m4a",
+                        "opus",
+                        "wav"
+                    ],
+                    "example": "mp3"
+                },
                 "h264_compatible": {
                     "type": "boolean",
                     "example": true
@@ -1764,7 +1814,6 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "url",
-                        "stream",
                         "async"
                     ],
                     "example": "url"
@@ -1772,10 +1821,11 @@ const docTemplate = `{
                 "type": {
                     "type": "string",
                     "enum": [
+                        "auto",
                         "video",
                         "audio"
                     ],
-                    "example": "video"
+                    "example": "auto"
                 },
                 "url": {
                     "type": "string",
@@ -1817,7 +1867,6 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "url",
-                        "stream",
                         "async"
                     ],
                     "example": "url"
@@ -1857,7 +1906,6 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "url",
-                        "stream",
                         "async"
                     ],
                     "example": "url"
@@ -1865,10 +1913,11 @@ const docTemplate = `{
                 "type": {
                     "type": "string",
                     "enum": [
+                        "auto",
                         "video",
                         "audio"
                     ],
-                    "example": "video"
+                    "example": "auto"
                 },
                 "url": {
                     "type": "string",
@@ -1911,7 +1960,6 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "url",
-                        "stream",
                         "async"
                     ],
                     "example": "url"
@@ -1955,7 +2003,6 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "url",
-                        "stream",
                         "async"
                     ],
                     "example": "url"

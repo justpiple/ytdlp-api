@@ -16,6 +16,7 @@ type Config struct {
 	LogLevel               string
 	YTDLPPath              string
 	FFmpegPath             string
+	GalleryDLPath          string
 	ProxyURL               string
 	CookiesFile            string
 	CookiesDir             string
@@ -38,6 +39,7 @@ func Load() (Config, error) {
 		LogLevel:               strings.ToLower(envString("LOG_LEVEL", "info")),
 		YTDLPPath:              envString("YTDLP_PATH", "yt-dlp"),
 		FFmpegPath:             envString("FFMPEG_PATH", "ffmpeg"),
+		GalleryDLPath:          envString("GALLERYDL_PATH", "gallery-dl"),
 		ProxyURL:               strings.TrimSpace(os.Getenv("PROXY_URL")),
 		CookiesFile:            strings.TrimSpace(os.Getenv("COOKIES_FILE")),
 		CookiesDir:             envString("COOKIES_DIR", "./cookies"),

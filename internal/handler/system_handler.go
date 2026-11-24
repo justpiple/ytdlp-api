@@ -26,7 +26,7 @@ func NewSystemHandler(svc *service.Downloader, logger *slog.Logger) *SystemHandl
 
 // Health godoc
 // @Summary      Healthcheck
-// @Description  Checks API readiness, yt-dlp/ffmpeg binary availability, active concurrency, and temp file count.
+// @Description  Checks API readiness, yt-dlp/gallery-dl/ffmpeg binary availability, active concurrency, and temp file count.
 // @Tags         system
 // @Produce      json
 // @Success      200  {object}  model.APIResponse{data=model.HealthResponse}

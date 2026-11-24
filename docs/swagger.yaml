@@ -54,32 +54,49 @@ definitions:
       response_mode:
         enum:
         - url
-        - stream
         - async
         example: url
         type: string
       type:
         enum:
+        - auto
         - video
         - audio
-        example: video
+        example: auto
         type: string
       url:
-        example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+        example: https://www.instagram.com/p/C0000000000/
         type: string
     required:
     - url
     type: object
   model.DownloadResult:
     properties:
+      count:
+        example: 3
+        type: integer
+      engine:
+        enum:
+        - yt-dlp
+        - gallery-dl
+        example: gallery-dl
+        type: string
       files:
         items:
           $ref: '#/definitions/model.DownloadedFile'
         type: array
+      media_type:
+        enum:
+        - video
+        - audio
+        - image
+        - carousel
+        example: carousel
+        type: string
       metadata:
         $ref: '#/definitions/model.MediaMetadata'
       platform:
-        example: youtube
+        example: instagram
         type: string
     type: object
   model.DownloadedFile:
@@ -90,19 +107,30 @@ definitions:
       expires_at:
         type: string
       extension:
-        example: mp3
+        example: jpg
         type: string
       file_id:
         example: f8b3a1c2-7d4e-4f1a-9b2c-123456789abc
         type: string
       filename:
-        example: Rick_Astley_-_Never_Gonna_Give_You_Up.mp3
+        example: 01_item.jpg
+        type: string
+      index:
+        example: 1
+        type: integer
+      media_type:
+        enum:
+        - video
+        - audio
+        - image
+        - other
+        example: image
         type: string
       mime_type:
-        example: audio/mpeg
+        example: image/jpeg
         type: string
       size_bytes:
-        example: 5124300
+        example: 245100
         type: integer
     type: object
   model.ErrorDetail:
@@ -164,6 +192,9 @@ definitions:
         type: integer
       ffmpeg_version:
         example: ffmpeg version 6.1.1
+        type: string
+      gallerydl_version:
+        example: 1.32.21
         type: string
       max_concurrent:
         example: 4
@@ -348,6 +379,14 @@ definitions:
     type: object
   model.SocialMediaRequest:
     properties:
+      audio_format:
+        enum:
+        - mp3
+        - m4a
+        - opus
+        - wav
+        example: mp3
+        type: string
       h264_compatible:
         example: true
         type: boolean
@@ -367,15 +406,15 @@ definitions:
       response_mode:
         enum:
         - url
-        - stream
         - async
         example: url
         type: string
       type:
         enum:
+        - auto
         - video
         - audio
-        example: video
+        example: auto
         type: string
       url:
         example: https://www.instagram.com/reel/C0000000000/
@@ -406,7 +445,6 @@ definitions:
       response_mode:
         enum:
         - url
-        - stream
         - async
         example: url
         type: string
@@ -435,15 +473,15 @@ definitions:
       response_mode:
         enum:
         - url
-        - stream
         - async
         example: url
         type: string
       type:
         enum:
+        - auto
         - video
         - audio
-        example: video
+        example: auto
         type: string
       url:
         example: https://www.tiktok.com/@tiktok/video/7106594312292453675
@@ -475,7 +513,6 @@ definitions:
       response_mode:
         enum:
         - url
-        - stream
         - async
         example: url
         type: string
@@ -508,7 +545,6 @@ definitions:
       response_mode:
         enum:
         - url
-        - stream
         - async
         example: url
         type: string
@@ -530,9 +566,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: 'Auto-detects the platform from URL (YouTube, TikTok, Instagram,
-        Threads, X, SoundCloud, Facebook, and 1000+ yt-dlp sites) and downloads video
-        or audio. Supports response_mode: url (default), stream, or async.'
+      description: 'Auto-detects platform and media type (video, audio, image, or
+        carousel) from URL for non-YouTube sources; SoundCloud stays audio-only. Supports
+        response_mode: url (default) or async.'
       parameters:
       - description: Download payload
         in: body
@@ -682,8 +718,8 @@ paths:
       - files
   /healthz:
     get:
-      description: Checks API readiness, yt-dlp/ffmpeg binary availability, active
-        concurrency, and temp file count.
+      description: Checks API readiness, yt-dlp/gallery-dl/ffmpeg binary availability,
+        active concurrency, and temp file count.
       produces:
       - application/json
       responses:
@@ -752,8 +788,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Downloads Instagram Reels, Posts, Carousels, or Stories (supports
-        cookies/instagram.txt).
+      description: Auto-detects and downloads Instagram Reels, Videos, Photos, Carousels,
+        or Stories (supports cookies/instagram.txt).
       parameters:
       - description: Instagram request
         in: body
@@ -1006,7 +1042,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Downloads Threads videos and carousel posts.
+      description: Auto-detects and downloads Threads videos, photos, and carousel
+        posts.
       parameters:
       - description: Threads request
         in: body
@@ -1050,8 +1087,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Downloads TikTok video (watermark-free when available), audio,
-        or multi-slide items.
+      description: Auto-detects TikTok video vs photo slideshow (expanding short links
+        like vt.tiktok.com), or forces video/audio when type is specified.
       parameters:
       - description: TikTok request
         in: body
@@ -1095,7 +1132,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Downloads videos, GIFs, and multi-video posts from X / Twitter.
+      description: Auto-detects and downloads X / Twitter videos, GIFs, images, and
+        multi-item posts.
       parameters:
       - description: X / Twitter request
         in: body
