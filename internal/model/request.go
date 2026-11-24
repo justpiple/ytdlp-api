@@ -54,7 +54,7 @@ type TikTokDownloadRequest struct {
 	Proxy          string `json:"proxy,omitempty"`
 }
 
-// SocialMediaRequest represents a download request for Instagram, Threads, X/Twitter, or Facebook.
+// SocialMediaRequest represents a download request for Instagram, Threads, X/Twitter, Facebook, or Pinterest.
 type SocialMediaRequest struct {
 	URL            string `json:"url" binding:"required" example:"https://www.instagram.com/reel/C0000000000/"`
 	Type           string `json:"type,omitempty" enums:"auto,video,audio" example:"auto"`

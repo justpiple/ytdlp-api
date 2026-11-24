@@ -81,9 +81,28 @@ func DetectPlatform(rawURL string) model.Platform {
 		return model.PlatformSoundCloud
 	case host == "facebook.com" || host == "fb.watch" || host == "fb.com" || strings.HasSuffix(host, ".facebook.com"):
 		return model.PlatformFacebook
+	case isPinterestHost(host):
+		return model.PlatformPinterest
 	case host != "":
 		return model.PlatformGeneric
 	default:
 		return model.PlatformUnknown
+	}
+}
+
+func isPinterestHost(host string) bool {
+	if host == "pin.it" || host == "pinterest.com" || strings.HasSuffix(host, ".pinterest.com") {
+		return true
+	}
+	switch host {
+	case "pinterest.at", "pinterest.be", "pinterest.ca", "pinterest.ch",
+		"pinterest.cl", "pinterest.co.kr", "pinterest.co.uk", "pinterest.com.au",
+		"pinterest.com.mx", "pinterest.de", "pinterest.dk", "pinterest.es",
+		"pinterest.fr", "pinterest.ie", "pinterest.info", "pinterest.it",
+		"pinterest.jp", "pinterest.nl", "pinterest.nz", "pinterest.ph",
+		"pinterest.pt", "pinterest.ru", "pinterest.se":
+		return true
+	default:
+		return false
 	}
 }

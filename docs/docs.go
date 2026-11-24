@@ -538,6 +538,82 @@ const docTemplate = `{
                 }
             }
         },
+        "/pinterest/download": {
+            "post": {
+                "description": "Auto-detects and downloads Pinterest image pins, video pins, GIFs, and idea pin carousels (auto-resolves pin.it short links).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pinterest"
+                ],
+                "summary": "Download Pinterest media",
+                "parameters": [
+                    {
+                        "description": "Pinterest request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.SocialMediaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.DownloadResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.JobAcceptedResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/platforms": {
             "get": {
                 "description": "Returns primary supported platforms and their capabilities/cookies hints.",
@@ -2023,7 +2099,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "yt-dlp Media Downloader & Search API",
-	Description:      "Internal REST API wrapping yt-dlp and ffmpeg for downloading and searching media from YouTube, TikTok, Instagram, Threads, X (Twitter), SoundCloud, Facebook, and more.",
+	Description:      "Internal REST API wrapping yt-dlp and ffmpeg for downloading and searching media from YouTube, TikTok, Instagram, Threads, X (Twitter), SoundCloud, Facebook, Pinterest, and more.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

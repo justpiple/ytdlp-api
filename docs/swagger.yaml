@@ -558,7 +558,7 @@ info:
   contact: {}
   description: Internal REST API wrapping yt-dlp and ffmpeg for downloading and searching
     media from YouTube, TikTok, Instagram, Threads, X (Twitter), SoundCloud, Facebook,
-    and more.
+    Pinterest, and more.
   title: yt-dlp Media Downloader & Search API
   version: "1.0"
 paths:
@@ -882,6 +882,51 @@ paths:
       summary: Stream async job progress via SSE
       tags:
       - jobs
+  /pinterest/download:
+    post:
+      consumes:
+      - application/json
+      description: Auto-detects and downloads Pinterest image pins, video pins, GIFs,
+        and idea pin carousels (auto-resolves pin.it short links).
+      parameters:
+      - description: Pinterest request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.SocialMediaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DownloadResult'
+              type: object
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.JobAcceptedResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Download Pinterest media
+      tags:
+      - pinterest
   /platforms:
     get:
       description: Returns primary supported platforms and their capabilities/cookies

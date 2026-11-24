@@ -394,7 +394,7 @@ func (d *Downloader) tryTikTokSlideshowFallback(
 
 func preferGalleryFirst(platform model.Platform, target string) bool {
 	switch platform {
-	case model.PlatformInstagram, model.PlatformThreads, model.PlatformTwitter:
+	case model.PlatformInstagram, model.PlatformThreads, model.PlatformTwitter, model.PlatformPinterest:
 		return true
 	case model.PlatformTikTok:
 		return ytdlp.IsTikTokPhotoURL(target)
@@ -552,6 +552,12 @@ func (d *Downloader) SupportedPlatforms() []model.PlatformCapability {
 			Display:    "Facebook",
 			Features:   []string{"auto", "video", "image", "audio", "reels"},
 			CookiesKey: "facebook.txt",
+		},
+		{
+			Name:       model.PlatformPinterest.String(),
+			Display:    "Pinterest",
+			Features:   []string{"auto", "image", "video", "gif", "carousel"},
+			CookiesKey: "pinterest.txt",
 		},
 		{
 			Name:       model.PlatformGeneric.String(),

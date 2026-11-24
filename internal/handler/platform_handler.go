@@ -219,6 +219,22 @@ func (h *PlatformHandler) FacebookDownload(c *gin.Context) {
 	h.handleSocialMedia(c, model.PlatformFacebook)
 }
 
+// PinterestDownload godoc
+// @Summary      Download Pinterest media
+// @Description  Auto-detects and downloads Pinterest image pins, video pins, GIFs, and idea pin carousels (auto-resolves pin.it short links).
+// @Tags         pinterest
+// @Accept       json
+// @Produce      json
+// @Param        request  body      model.SocialMediaRequest  true  "Pinterest request"
+// @Success      200      {object}  model.APIResponse{data=model.DownloadResult}
+// @Success      202      {object}  model.APIResponse{data=model.JobAcceptedResponse}
+// @Failure      400      {object}  model.ErrorResponse
+// @Failure      404      {object}  model.ErrorResponse
+// @Router       /pinterest/download [post]
+func (h *PlatformHandler) PinterestDownload(c *gin.Context) {
+	h.handleSocialMedia(c, model.PlatformPinterest)
+}
+
 // SoundCloudSearch godoc
 // @Summary      Search SoundCloud
 // @Description  Searches SoundCloud tracks by keyword.

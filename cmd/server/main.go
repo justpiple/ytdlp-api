@@ -24,7 +24,7 @@ import (
 
 // @title           yt-dlp Media Downloader & Search API
 // @version         1.0
-// @description     Internal REST API wrapping yt-dlp and ffmpeg for downloading and searching media from YouTube, TikTok, Instagram, Threads, X (Twitter), SoundCloud, Facebook, and more.
+// @description     Internal REST API wrapping yt-dlp and ffmpeg for downloading and searching media from YouTube, TikTok, Instagram, Threads, X (Twitter), SoundCloud, Facebook, Pinterest, and more.
 // @BasePath        /api/v1
 func main() {
 	if err := run(); err != nil {

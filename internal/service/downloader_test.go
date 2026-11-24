@@ -435,6 +435,52 @@ func TestDownloader_AutoDetectAndCarouselStrategy(t *testing.T) {
 		assert.Equal(t, engineYTDLP, res.Engine)
 	})
 
+	t.Run("pinterest auto prefers gallery-dl and falls back to yt-dlp on not-found", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+
+		ytCalled := false
+		runner := &mockRunner{
+			downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
+				ytCalled = true
+				p := filepath.Join(opts.OutputDir, "01_pin.mp4")
+				require.NoError(t, os.WriteFile(p, []byte("pin-video"), 0o640))
+				return []model.MediaMetadata{{ID: "123456", Platform: "pinterest"}}, []string{p}, nil
+			},
+		}
+		gallery := &mockGalleryRunner{
+			downloadFn: func(ctx context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+				f1 := filepath.Join(opts.OutputDir, "01.jpg")
+				require.NoError(t, os.WriteFile(f1, []byte("pin-img"), 0o640))
+				return model.MediaMetadata{ID: "123456", Title: "Pin Image", Platform: "pinterest"}, []string{f1}, nil
+			},
+		}
+
+		svc, cancel := newTestService(t, runner, gallery)
+		defer cancel()
+
+		res, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+			URL: "https://www.pinterest.com/pin/123456/",
+		}, model.PlatformPinterest)
+		require.NoError(t, err)
+		assert.False(t, ytCalled)
+		assert.Equal(t, "pinterest", res.Platform)
+		assert.Equal(t, model.MediaKindImage, res.MediaType)
+		assert.Equal(t, engineGalleryDL, res.Engine)
+		require.Len(t, res.Files, 1)
+		assert.Equal(t, model.MediaKindImage, res.Files[0].MediaType)
+
+		gallery.downloadFn = func(ctx context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+			return model.MediaMetadata{}, nil, ytdlp.ErrMediaNotFound
+		}
+		res2, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+			URL: "https://www.pinterest.com/pin/123456/",
+		}, model.PlatformPinterest)
+		require.NoError(t, err)
+		assert.True(t, ytCalled)
+		assert.Equal(t, engineYTDLP, res2.Engine)
+		assert.Equal(t, model.MediaKindVideo, res2.MediaType)
+	})
+
 	t.Run("empty primary result without error falls back and returns error when fallback also fails", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
 

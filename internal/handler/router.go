@@ -56,6 +56,7 @@ func NewRouter(cfg config.Config, svc *service.Downloader, logger *slog.Logger) 
 		v1.POST("/threads/download", platformH.ThreadsDownload)
 		v1.POST("/twitter/download", platformH.TwitterDownload)
 		v1.POST("/facebook/download", platformH.FacebookDownload)
+		v1.POST("/pinterest/download", platformH.PinterestDownload)
 
 		sc := v1.Group("/soundcloud")
 		{

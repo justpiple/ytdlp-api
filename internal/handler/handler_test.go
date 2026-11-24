@@ -156,7 +156,15 @@ func TestSystemEndpoints(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		var resp testAPIResponse[[]model.PlatformCapability]
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		assert.GreaterOrEqual(t, len(resp.Data), 8)
+		assert.GreaterOrEqual(t, len(resp.Data), 9)
+		var hasPinterest bool
+		for _, p := range resp.Data {
+			if p.Name == "pinterest" {
+				hasPinterest = true
+				break
+			}
+		}
+		assert.True(t, hasPinterest, "platforms list should include pinterest")
 	})
 }
 
@@ -258,6 +266,20 @@ func TestUnifiedAndPlatformEndpoints(t *testing.T) {
 			path:       "/api/v1/facebook/download",
 			body:       `{"url":"https://fb.watch/abc/"}`,
 			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "pinterest download",
+			method:     http.MethodPost,
+			path:       "/api/v1/pinterest/download",
+			body:       `{"url":"https://www.pinterest.com/pin/123456789/"}`,
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "pinterest platform mismatch rejected",
+			method:     http.MethodPost,
+			path:       "/api/v1/pinterest/download",
+			body:       `{"url":"https://www.instagram.com/p/abc/"}`,
+			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name:       "platform mismatch rejected",

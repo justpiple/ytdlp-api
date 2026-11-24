@@ -26,6 +26,8 @@ func TestIsShortLink(t *testing.T) {
 		{name: "instagram regular post", url: "https://www.instagram.com/p/abc/", want: false},
 		{name: "fb watch", url: "https://fb.watch/abc123/", want: true},
 		{name: "twitter t.co", url: "https://t.co/xyz123", want: true},
+		{name: "pinterest pin.it", url: "https://pin.it/abc123", want: true},
+		{name: "pinterest regular pin", url: "https://www.pinterest.com/pin/123456789/", want: false},
 		{name: "youtube url", url: "https://www.youtube.com/watch?v=123", want: false},
 	}
 

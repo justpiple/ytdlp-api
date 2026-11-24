@@ -227,12 +227,19 @@ func parseMetadataJSON(data []byte, platform model.Platform, targetURL string) (
 		return model.MediaMetadata{}, false
 	}
 
-	id := firstStringField(raw, "post_shortcode", "shortcode", "tweet_id", "post_id", "media_id", "id")
+	id := firstStringField(raw, "post_shortcode", "shortcode", "tweet_id", "post_id", "media_id", "pin_id", "id")
 	desc := firstStringField(raw, "description", "content", "caption", "title")
 	title := firstStringField(raw, "title", "description", "content", "caption")
 	uploader := firstStringField(raw, "username", "owner_username", "uploader", "nickname")
 	if uploader == "" {
-		uploader = firstNestedString(raw, []string{"author", "name"}, []string{"author", "nick"}, []string{"user", "name"})
+		uploader = firstNestedString(
+			raw,
+			[]string{"author", "name"},
+			[]string{"author", "nick"},
+			[]string{"user", "name"},
+			[]string{"pinner", "username"},
+			[]string{"pinner", "full_name"},
+		)
 	}
 	webpage := firstStringField(raw, "post_url", "webpage_url", "url")
 	if !ytdlp.IsHTTPURL(webpage) {

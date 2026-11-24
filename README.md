@@ -17,6 +17,7 @@ A lightweight **Go + Gin** REST API wrapping [`yt-dlp`](https://github.com/yt-dl
 | **X (Twitter)** | Video, GIF, Images, Multi-item | `/api/v1/twitter/download` |
 | **SoundCloud** | Search, Audio-only | `/api/v1/soundcloud/{search,download}` |
 | **Facebook** | Reels, Watch, Public Video/Image | `/api/v1/facebook/download` |
+| **Pinterest** | Image, Video, GIF, Carousel | `/api/v1/pinterest/download` |
 | **Universal** | Auto-detect + [1,000+ `yt-dlp`](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) / [`gallery-dl`](https://github.com/mikf/gallery-dl/blob/master/docs/supportedsites.md) sites | `/api/v1/{info,download,search}` |
 
 ---
@@ -81,7 +82,7 @@ Configure via `.env` or environment variables (see [`.env.example`](.env.example
 
 ## Cookies & Proxy
 
-- **Per-platform cookies:** Place Netscape-format cookie files in `./cookies/` (e.g. `instagram.txt`, `youtube.txt`, `twitter.txt`, `threads.txt`, `facebook.txt`, `tiktok.txt`).
+- **Per-platform cookies:** Place Netscape-format cookie files in `./cookies/` (e.g. `instagram.txt`, `youtube.txt`, `twitter.txt`, `threads.txt`, `facebook.txt`, `tiktok.txt`, `pinterest.txt`).
 - **Global cookies:** Set `COOKIES_FILE` as a fallback.
 - **Proxy:** Set `PROXY_URL` globally, or pass `"proxy"` in individual API requests.
 

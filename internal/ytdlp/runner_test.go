@@ -61,6 +61,10 @@ func TestDetectPlatform(t *testing.T) {
 		{name: "soundcloud", url: "https://soundcloud.com/artist/track", expected: model.PlatformSoundCloud},
 		{name: "facebook watch", url: "https://fb.watch/abc123/", expected: model.PlatformFacebook},
 		{name: "facebook web", url: "https://www.facebook.com/reel/123", expected: model.PlatformFacebook},
+		{name: "pinterest web", url: "https://www.pinterest.com/pin/123456789/", expected: model.PlatformPinterest},
+		{name: "pinterest regional subdomain", url: "https://id.pinterest.com/pin/123456789/", expected: model.PlatformPinterest},
+		{name: "pinterest country tld", url: "https://www.pinterest.co.uk/pin/123456789/", expected: model.PlatformPinterest},
+		{name: "pinterest short pin.it", url: "https://pin.it/abc123", expected: model.PlatformPinterest},
 		{name: "generic site", url: "https://vimeo.com/12345", expected: model.PlatformGeneric},
 	}
 

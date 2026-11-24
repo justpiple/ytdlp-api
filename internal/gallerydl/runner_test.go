@@ -77,6 +77,14 @@ func TestExtractAndCleanupMetadata(t *testing.T) {
 			wantTitle:    "Photo dump",
 			wantUploader: "alice",
 		},
+		{
+			name:         "pinterest pin metadata with nested pinner",
+			jsonPayload:  `{"id":"9876543210","description":"Minimalist desk setup","pinner":{"username":"designfan","full_name":"Design Fan"},"category":"pinterest"}`,
+			platform:     model.PlatformPinterest,
+			wantID:       "9876543210",
+			wantTitle:    "Minimalist desk setup",
+			wantUploader: "designfan",
+		},
 	}
 
 	for _, tt := range tests {

@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Internal REST API wrapping yt-dlp and ffmpeg for downloading and searching media from YouTube, TikTok, Instagram, Threads, X (Twitter), SoundCloud, Facebook, and more.",
+        "description": "Internal REST API wrapping yt-dlp and ffmpeg for downloading and searching media from YouTube, TikTok, Instagram, Threads, X (Twitter), SoundCloud, Facebook, Pinterest, and more.",
         "title": "yt-dlp Media Downloader \u0026 Search API",
         "contact": {},
         "version": "1.0"
@@ -520,6 +520,82 @@
                         "description": "SSE progress stream",
                         "schema": {
                             "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pinterest/download": {
+            "post": {
+                "description": "Auto-detects and downloads Pinterest image pins, video pins, GIFs, and idea pin carousels (auto-resolves pin.it short links).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pinterest"
+                ],
+                "summary": "Download Pinterest media",
+                "parameters": [
+                    {
+                        "description": "Pinterest request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.SocialMediaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.DownloadResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.JobAcceptedResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "404": {

@@ -37,7 +37,7 @@ func IsShortLink(rawURL string) bool {
 		return true
 	case host == "instagram.com" && strings.HasPrefix(path, "/share/"):
 		return true
-	case host == "fb.watch" || host == "t.co":
+	case host == "fb.watch" || host == "t.co" || host == "pin.it":
 		return true
 	default:
 		return false

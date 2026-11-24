@@ -14,6 +14,7 @@ const (
 	PlatformTwitter
 	PlatformSoundCloud
 	PlatformFacebook
+	PlatformPinterest
 	PlatformGeneric
 )
 
@@ -34,6 +35,8 @@ func (p Platform) String() string {
 		return "soundcloud"
 	case PlatformFacebook:
 		return "facebook"
+	case PlatformPinterest:
+		return "pinterest"
 	case PlatformGeneric:
 		return "generic"
 	default:
@@ -58,6 +61,8 @@ func ParsePlatform(raw string) Platform {
 		return PlatformSoundCloud
 	case "facebook", "fb":
 		return PlatformFacebook
+	case "pinterest", "pin":
+		return PlatformPinterest
 	case "generic":
 		return PlatformGeneric
 	default:
