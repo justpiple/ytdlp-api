@@ -54,7 +54,7 @@ make run         # Start server on :8080
 
 ## Configuration
 
-Configure via `.env` or environment variables (see [`.env.example`](.env.example)):
+Configure via `.env` or environment variables (see [`.env.example`](.env.example)). All variables include `${VAR:-default}` bindings in [`docker-compose.yml`](docker-compose.yml) so PaaS tools like Coolify auto-populate defaults for customization:
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |

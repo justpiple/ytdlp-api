@@ -15,10 +15,12 @@ services:
       GIN_MODE: ${GIN_MODE:-release}
       BASE_URL: ${BASE_URL:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      YTDLP_PATH: ${YTDLP_PATH:-yt-dlp}
+      FFMPEG_PATH: ${FFMPEG_PATH:-ffmpeg}
       PROXY_URL: ${PROXY_URL:-}
       COOKIES_FILE: ${COOKIES_FILE:-}
-      COOKIES_DIR: /app/cookies
-      TEMP_DIR: /tmp/ytdlp-api
+      COOKIES_DIR: ${COOKIES_DIR:-/app/cookies}
+      TEMP_DIR: ${TEMP_DIR:-/tmp/ytdlp-api}
       FILE_TTL: ${FILE_TTL:-15m}
       CLEANUP_INTERVAL: ${CLEANUP_INTERVAL:-5m}
       MAX_CONCURRENT_DOWNLOADS: ${MAX_CONCURRENT_DOWNLOADS:-4}

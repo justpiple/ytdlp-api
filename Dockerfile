@@ -44,8 +44,21 @@ USER appuser
 
 ENV PORT=8080 \
     GIN_MODE=release \
+    BASE_URL="" \
+    LOG_LEVEL=info \
+    YTDLP_PATH=yt-dlp \
+    FFMPEG_PATH=ffmpeg \
+    PROXY_URL="" \
+    COOKIES_FILE="" \
+    COOKIES_DIR=/app/cookies \
     TEMP_DIR=/tmp/ytdlp-api \
-    COOKIES_DIR=/app/cookies
+    FILE_TTL=15m \
+    CLEANUP_INTERVAL=5m \
+    MAX_CONCURRENT_DOWNLOADS=4 \
+    DOWNLOAD_TIMEOUT=5m \
+    INFO_TIMEOUT=45s \
+    MAX_FILESIZE=100M \
+    MAX_PLAYLIST_ITEMS=10
 
 EXPOSE 8080
 
