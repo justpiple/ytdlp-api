@@ -226,7 +226,8 @@ func videoFormatSelector(quality string, h264Compatible bool) string {
 	if maxHeight > 0 {
 		if h264Compatible {
 			return fmt.Sprintf(
-				"bestvideo[height<=%d][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=%d]+bestaudio/best[height<=%d]/best",
+				"bestvideo[height<=%d][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=%d][vcodec^=avc1]/bestvideo[height<=%d]+bestaudio/best[height<=%d]/best",
+				maxHeight,
 				maxHeight,
 				maxHeight,
 				maxHeight,
@@ -240,7 +241,7 @@ func videoFormatSelector(quality string, h264Compatible bool) string {
 	}
 
 	if h264Compatible {
-		return "bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo+bestaudio/best"
+		return "bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[vcodec^=avc1]/bestvideo+bestaudio/best"
 	}
 	return "bestvideo+bestaudio/best"
 }

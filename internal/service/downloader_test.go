@@ -442,3 +442,80 @@ func TestDownloader_AutoDetectAndCarouselStrategy(t *testing.T) {
 		assert.Equal(t, engineYTDLP, res.Engine)
 	})
 }
+
+func TestDownloader_H264CompatibilityPostProcessing(t *testing.T) {
+	tests := []struct {
+		name           string
+		h264Compat     *bool
+		wantTranscoded bool
+	}{
+		{
+			name:           "default h264_compatible=true transcodes vp9 output",
+			h264Compat:     nil,
+			wantTranscoded: true,
+		},
+		{
+			name:           "explicit h264_compatible=false keeps original vp9 output",
+			h264Compat:     new(false),
+			wantTranscoded: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer goleak.VerifyNone(t)
+
+			binDir := t.TempDir()
+			ffprobePath := filepath.Join(binDir, "ffprobe")
+			ffmpegPath := filepath.Join(binDir, "ffmpeg")
+			require.NoError(t, os.WriteFile(ffprobePath, []byte(`#!/bin/sh
+printf '{"streams":[{"index":0,"codec_type":"video","codec_name":"vp9","codec_tag_string":"vp09","pix_fmt":"yuv420p"}]}\n'
+`), 0o755))
+			require.NoError(t, os.WriteFile(ffmpegPath, []byte(`#!/bin/sh
+for last in "$@"; do :; done
+printf 'h264-converted' > "$last"
+`), 0o755))
+
+			var producedPath string
+			runner := &mockRunner{
+				downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
+					producedPath = filepath.Join(opts.OutputDir, "01_DgGv7HKztVz.mp4")
+					require.NoError(t, os.WriteFile(producedPath, []byte("raw-vp9"), 0o640))
+					return []model.MediaMetadata{{ID: "DgGv7HKztVz", Platform: "youtube"}}, []string{producedPath}, nil
+				},
+			}
+
+			cfg := config.Config{
+				FFmpegPath:             ffmpegPath,
+				TempDir:                t.TempDir(),
+				FileTTL:                10 * time.Minute,
+				MaxConcurrentDownloads: 2,
+				DownloadTimeout:        10 * time.Second,
+				InfoTimeout:            5 * time.Second,
+				MaxFilesize:            "100M",
+				MaxPlaylistItems:       10,
+			}
+			store, err := storage.NewManager(cfg.TempDir, cfg.FileTTL)
+			require.NoError(t, err)
+			jobMgr := job.NewManager(cfg.MaxConcurrentDownloads)
+			rootCtx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+
+			svc := NewDownloader(rootCtx, cfg, runner, &mockGalleryRunner{}, store, jobMgr)
+			res, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+				URL:            "https://www.youtube.com/watch?v=DgGv7HKztVz",
+				H264Compatible: tt.h264Compat,
+			}, model.PlatformYouTube)
+			require.NoError(t, err)
+			require.Len(t, res.Files, 1)
+
+			data, readErr := os.ReadFile(producedPath)
+			require.NoError(t, readErr)
+			if tt.wantTranscoded {
+				assert.Equal(t, "h264-converted", string(data))
+			} else {
+				assert.Equal(t, "raw-vp9", string(data))
+			}
+		})
+	}
+}

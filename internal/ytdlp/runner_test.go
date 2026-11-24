@@ -138,7 +138,7 @@ func TestBuildDownloadArgs(t *testing.T) {
 			OutputDir:      "/tmp/out",
 		})
 
-		is.Contains(args, "bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best/bestaudio/best")
+		is.Contains(args, "bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=720][vcodec^=avc1]/bestvideo[height<=720]+bestaudio/best[height<=720]/best/bestaudio/best")
 		is.Contains(args, "--merge-output-format")
 	})
 }

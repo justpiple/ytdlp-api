@@ -243,6 +243,27 @@ func (d *Downloader) fetchMedia(
 	opts ytdlp.DownloadOptions,
 	onProgress ytdlp.ProgressCallback,
 ) (string, []model.MediaMetadata, []string, error) {
+	engine, metaList, filePaths, err := d.fetchRawMedia(ctx, jobDir, opts, onProgress)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	if opts.H264Compatible && opts.MediaType != model.MediaKindAudio {
+		filePaths, err = ytdlp.EnsureH264CompatibleFiles(ctx, d.cfg.FFmpegPath, filePaths, onProgress)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("ensuring h264 compatibility: %w", err)
+		}
+	}
+
+	return engine, metaList, filePaths, nil
+}
+
+func (d *Downloader) fetchRawMedia(
+	ctx context.Context,
+	jobDir string,
+	opts ytdlp.DownloadOptions,
+	onProgress ytdlp.ProgressCallback,
+) (string, []model.MediaMetadata, []string, error) {
 	if opts.MediaType != "auto" || d.gallery == nil {
 		metaList, files, err := d.runYTDLP(ctx, jobDir, opts, onProgress)
 		if err != nil {
