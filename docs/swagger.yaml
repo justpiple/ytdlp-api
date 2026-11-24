@@ -1274,7 +1274,4 @@ paths:
       summary: Download YouTube video
       tags:
       - youtube
-schemes:
-- http
-- https
 swagger: "2.0"

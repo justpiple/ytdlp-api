@@ -25,7 +25,6 @@ import (
 // @version         1.0
 // @description     Internal REST API wrapping yt-dlp and ffmpeg for downloading and searching media from YouTube, TikTok, Instagram, Threads, X (Twitter), SoundCloud, Facebook, and more.
 // @BasePath        /api/v1
-// @schemes         http https
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "fatal error: %v\n", err)
