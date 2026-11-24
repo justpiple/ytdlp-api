@@ -128,6 +128,68 @@ func TestBuildDownloadArgs(t *testing.T) {
 	})
 }
 
+func TestResolveFFmpegLocation(t *testing.T) {
+	binDir := t.TempDir()
+	fakeFFmpeg := filepath.Join(binDir, "custom-ffmpeg")
+	require.NoError(t, os.WriteFile(fakeFFmpeg, []byte("#!/bin/sh\nexit 0\n"), 0o755))
+
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	tests := []struct {
+		name       string
+		ffmpegPath string
+		wantLoc    string
+		wantFlag   bool
+	}{
+		{
+			name:       "bare binary name resolved from PATH",
+			ffmpegPath: "custom-ffmpeg",
+			wantLoc:    fakeFFmpeg,
+			wantFlag:   true,
+		},
+		{
+			name:       "explicit filesystem path preserved",
+			ffmpegPath: "/usr/local/bin/ffmpeg",
+			wantLoc:    "/usr/local/bin/ffmpeg",
+			wantFlag:   true,
+		},
+		{
+			name:       "unresolved bare binary name omits flag",
+			ffmpegPath: "definitely-missing-ffmpeg-binary",
+			wantFlag:   false,
+		},
+		{
+			name:       "empty path omits flag",
+			ffmpegPath: "",
+			wantFlag:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			is := assert.New(t)
+			cfg := config.Config{
+				FFmpegPath:       tt.ffmpegPath,
+				MaxPlaylistItems: 10,
+			}
+			args := BuildDownloadArgs(cfg, DownloadOptions{
+				Target:    "https://www.youtube.com/watch?v=123",
+				Platform:  model.PlatformYouTube,
+				MediaType: "audio",
+				OutputDir: "/tmp/out",
+			})
+
+			if !tt.wantFlag {
+				is.NotContains(args, "--ffmpeg-location")
+				return
+			}
+
+			is.Contains(args, "--ffmpeg-location")
+			is.Contains(args, tt.wantLoc)
+		})
+	}
+}
+
 func TestBuildSearchArgs(t *testing.T) {
 	t.Parallel()
 	cfg := config.Config{FFmpegPath: "ffmpeg"}

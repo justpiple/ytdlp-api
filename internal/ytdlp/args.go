@@ -3,6 +3,7 @@ package ytdlp
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -132,7 +133,10 @@ func baseArgs(cfg config.Config, platform model.Platform, proxyOverride string) 
 	args := []string{
 		"--no-warnings",
 		"--encoding", "utf-8",
-		"--ffmpeg-location", cfg.FFmpegPath,
+	}
+
+	if ffmpegLoc := resolveFFmpegLocation(cfg.FFmpegPath); ffmpegLoc != "" {
+		args = append(args, "--ffmpeg-location", ffmpegLoc)
 	}
 
 	proxy := strings.TrimSpace(proxyOverride)
@@ -148,6 +152,24 @@ func baseArgs(cfg config.Config, platform model.Platform, proxyOverride string) 
 	}
 
 	return args
+}
+
+// resolveFFmpegLocation resolves bare executable names (e.g. "ffmpeg") via PATH
+// because yt-dlp's --ffmpeg-location requires an existing filesystem path and fails
+// when given an unresolved binary name.
+func resolveFFmpegLocation(ffmpegPath string) string {
+	trimmed := strings.TrimSpace(ffmpegPath)
+	if trimmed == "" {
+		return ""
+	}
+	if trimmed != "." && trimmed != ".." && !strings.ContainsAny(trimmed, `/\`) {
+		resolved, err := exec.LookPath(trimmed)
+		if err != nil {
+			return ""
+		}
+		return resolved
+	}
+	return trimmed
 }
 
 func resolveCookiesFile(cfg config.Config, platform model.Platform) string {
