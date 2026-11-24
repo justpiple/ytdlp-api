@@ -68,6 +68,7 @@ jobs:
           curl -fsS -o /dev/null -w "swagger_http_code=%{http_code}\n" http://localhost:18080/swagger/index.html
           docker exec "$CID" yt-dlp --version
           docker exec "$CID" gallery-dl --version
+          docker exec "$CID" python3 -c "from urllib3.contrib.socks import SOCKSProxyManager; print(SOCKSProxyManager.__name__)"
 
       - name: Log in to GitHub Container Registry
         if: github.event_name != 'pull_request'

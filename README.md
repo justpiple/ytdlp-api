@@ -42,7 +42,7 @@ docker run -d --name ytdlp-api \
 
 ### Local Development
 
-Requires **Go 1.26+**, `yt-dlp`, `gallery-dl`, `ffmpeg`, and `deno`.
+Requires **Go 1.26+**, `yt-dlp`, `gallery-dl` (plus `PySocks` for SOCKS proxy support, see [`requirements.txt`](requirements.txt)), `ffmpeg`, and `deno`.
 
 ```bash
 make swag        # Regenerate Swagger specs in docs/
