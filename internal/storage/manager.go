@@ -139,8 +139,9 @@ func (m *Manager) DeleteFile(fileID string) error {
 		return fmt.Errorf("removing file %q: %w", record.Path, err)
 	}
 
-	parent := filepath.Dir(record.Path)
-	if parent != m.baseDir && strings.HasPrefix(parent, m.baseDir) {
+	parent := filepath.Clean(filepath.Dir(record.Path))
+	baseDir := filepath.Clean(m.baseDir)
+	if parent != baseDir && strings.HasPrefix(parent, baseDir+string(filepath.Separator)) {
 		entries, err := os.ReadDir(parent)
 		if err == nil && len(entries) == 0 {
 			_ = os.Remove(parent)
@@ -209,22 +210,38 @@ func detectMimeType(ext string) string {
 	switch ext {
 	case "mp4":
 		return "video/mp4"
+	case "m4v":
+		return "video/x-m4v"
 	case "webm":
 		return "video/webm"
 	case "mkv":
 		return "video/x-matroska"
 	case "mov":
 		return "video/quicktime"
+	case "avi":
+		return "video/x-msvideo"
+	case "flv":
+		return "video/x-flv"
+	case "ts":
+		return "video/mp2t"
+	case "3gp":
+		return "video/3gpp"
 	case "mp3":
 		return "audio/mpeg"
 	case "m4a":
 		return "audio/mp4"
+	case "aac":
+		return "audio/aac"
+	case "flac":
+		return "audio/flac"
 	case "opus":
 		return "audio/opus"
 	case "ogg":
 		return "audio/ogg"
 	case "wav":
 		return "audio/wav"
+	case "weba":
+		return "audio/webm"
 	case "jpg", "jpeg":
 		return "image/jpeg"
 	case "png":

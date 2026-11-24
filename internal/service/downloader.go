@@ -269,54 +269,62 @@ func (d *Downloader) fetchRawMedia(
 		if err != nil {
 			return "", nil, nil, err
 		}
+		if len(files) == 0 {
+			return "", nil, nil, fmt.Errorf("%w: no output file produced", ytdlp.ErrMediaNotFound)
+		}
 		return engineYTDLP, metaList, files, nil
 	}
 
-	if preferGalleryFirst(opts.Platform, opts.Target) {
-		gdMeta, gdFiles, gdErr := d.runGalleryDL(ctx, jobDir, opts, onProgress)
-		if gdErr == nil && len(gdFiles) > 0 {
-			return engineGalleryDL, []model.MediaMetadata{gdMeta}, gdFiles, nil
-		}
-		if !shouldFallback(ctx, gdErr) {
-			return "", nil, nil, gdErr
-		}
-
-		clearDirContents(jobDir)
-		ytMeta, ytFiles, ytErr := d.runYTDLP(ctx, jobDir, opts, onProgress)
-		if ytErr == nil && len(ytFiles) > 0 {
-			return engineYTDLP, ytMeta, ytFiles, nil
-		}
-		if !shouldFallback(ctx, ytErr) {
-			return "", nil, nil, ytErr
-		}
-		return "", nil, nil, gdErr
-	}
-
-	ytMeta, ytFiles, ytErr := d.runYTDLP(ctx, jobDir, opts, onProgress)
-	if ytErr == nil && len(ytFiles) > 0 {
+	galleryFirst := preferGalleryFirst(opts.Platform, opts.Target)
+	primaryEngine, primaryMeta, primaryFiles, primaryErr := d.runEngine(ctx, jobDir, opts, onProgress, galleryFirst)
+	if primaryErr == nil && len(primaryFiles) > 0 {
 		// TikTok photo slideshows cause yt-dlp to download only background music without video/images.
 		// Recover images via gallery-dl when yt-dlp returns audio-only for a TikTok URL in auto mode.
-		if opts.Platform == model.PlatformTikTok && isAllAudioFiles(ytFiles) {
-			if gdMeta, gdFiles, ok := d.tryTikTokSlideshowFallback(ctx, jobDir, opts, ytFiles, onProgress); ok {
+		if !galleryFirst && opts.Platform == model.PlatformTikTok && isAllAudioFiles(primaryFiles) {
+			if gdMeta, gdFiles, ok := d.tryTikTokSlideshowFallback(ctx, jobDir, opts, primaryFiles, onProgress); ok {
 				return engineGalleryDL, []model.MediaMetadata{gdMeta}, gdFiles, nil
 			}
 		}
-		return engineYTDLP, ytMeta, ytFiles, nil
+		return primaryEngine, primaryMeta, primaryFiles, nil
 	}
 
-	if !shouldFallback(ctx, ytErr) {
-		return "", nil, nil, ytErr
+	if primaryErr == nil {
+		primaryErr = fmt.Errorf("%w: no output file produced", ytdlp.ErrMediaNotFound)
+	}
+	if !shouldFallback(ctx, primaryErr) {
+		return "", nil, nil, primaryErr
 	}
 
 	clearDirContents(jobDir)
-	gdMeta, gdFiles, gdErr := d.runGalleryDL(ctx, jobDir, opts, onProgress)
-	if gdErr == nil && len(gdFiles) > 0 {
+	fallbackEngine, fallbackMeta, fallbackFiles, fallbackErr := d.runEngine(ctx, jobDir, opts, onProgress, !galleryFirst)
+	if fallbackErr == nil && len(fallbackFiles) > 0 {
+		return fallbackEngine, fallbackMeta, fallbackFiles, nil
+	}
+	if fallbackErr != nil && !shouldFallback(ctx, fallbackErr) {
+		return "", nil, nil, fallbackErr
+	}
+	return "", nil, nil, primaryErr
+}
+
+func (d *Downloader) runEngine(
+	ctx context.Context,
+	outputDir string,
+	opts ytdlp.DownloadOptions,
+	onProgress ytdlp.ProgressCallback,
+	useGalleryDL bool,
+) (string, []model.MediaMetadata, []string, error) {
+	if useGalleryDL {
+		gdMeta, gdFiles, err := d.runGalleryDL(ctx, outputDir, opts, onProgress)
+		if err != nil {
+			return "", nil, nil, err
+		}
 		return engineGalleryDL, []model.MediaMetadata{gdMeta}, gdFiles, nil
 	}
-	if !shouldFallback(ctx, gdErr) {
-		return "", nil, nil, gdErr
+	ytMeta, ytFiles, err := d.runYTDLP(ctx, outputDir, opts, onProgress)
+	if err != nil {
+		return "", nil, nil, err
 	}
-	return "", nil, nil, ytErr
+	return engineYTDLP, ytMeta, ytFiles, nil
 }
 
 func (d *Downloader) runYTDLP(

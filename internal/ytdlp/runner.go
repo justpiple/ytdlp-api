@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -275,19 +276,23 @@ func cleanPlaceholder(s string) string {
 }
 
 func collectDownloadedFiles(dir string) ([]string, error) {
-	matches, err := filepath.Glob(filepath.Join(dir, "*"))
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("globbing output dir: %w", err)
+		return nil, fmt.Errorf("reading output dir: %w", err)
 	}
 
-	files := make([]string, 0, len(matches))
-	for _, path := range matches {
-		ext := strings.ToLower(filepath.Ext(path))
-		// Skip temporary partial or sidecar files left by yt-dlp.
-		if ext == ".part" || ext == ".ytdl" || ext == ".temp" {
+	files := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
 			continue
 		}
-		files = append(files, path)
+		name := entry.Name()
+		ext := strings.ToLower(filepath.Ext(name))
+		// Skip temporary partial or sidecar files left by yt-dlp.
+		if ext == ".part" || ext == ".ytdl" || ext == ".temp" || ext == ".json" {
+			continue
+		}
+		files = append(files, filepath.Join(dir, name))
 	}
 	return files, nil
 }

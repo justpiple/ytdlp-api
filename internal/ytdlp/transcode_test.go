@@ -34,7 +34,7 @@ func TestBuildCompatibilityPlan(t *testing.T) {
 				{Index: 0, CodecType: "video", CodecName: "h264", CodecTagString: "avc1", PixFmt: "yuv420p"},
 				{Index: 1, CodecType: "audio", CodecName: "aac", CodecTagString: "mp4a"},
 			},
-			wantIsVideo: true,
+			wantIsVideo:  true,
 			wantHasAudio: true,
 		},
 		{
@@ -236,10 +236,9 @@ func TestEnsureH264CompatibleFiles(t *testing.T) {
 		workDir := t.TempDir()
 		ffmpegLog := filepath.Join(workDir, "ffmpeg.log")
 
-		ffprobeBin := writeFakeScript(t, binDir, "ffprobe", `#!/bin/sh
+		writeFakeScript(t, binDir, "ffprobe", `#!/bin/sh
 printf '{"streams":[{"index":0,"codec_type":"video","codec_name":"h264","codec_tag_string":"avc1","pix_fmt":"yuv420p"},{"index":1,"codec_type":"audio","codec_name":"aac","codec_tag_string":"mp4a"}]}\n'
 `)
-		_ = ffprobeBin
 		ffmpegBin := writeFakeScript(t, binDir, "ffmpeg", fmt.Sprintf(`#!/bin/sh
 echo "CALLED" >> %q
 exit 1

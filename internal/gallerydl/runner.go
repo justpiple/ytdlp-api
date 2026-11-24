@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"unicode"
 
 	"github.com/justpiple/ytdlp-api/internal/config"
 	"github.com/justpiple/ytdlp-api/internal/model"
@@ -220,8 +219,11 @@ func extractAndCleanupMetadata(dir string, platform model.Platform, targetURL st
 }
 
 func parseMetadataJSON(data []byte, platform model.Platform, targetURL string) (model.MediaMetadata, bool) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+
 	var raw map[string]any
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := dec.Decode(&raw); err != nil {
 		return model.MediaMetadata{}, false
 	}
 
@@ -265,6 +267,10 @@ func firstStringField(m map[string]any, keys ...string) string {
 		case string:
 			if strings.TrimSpace(typed) != "" {
 				return strings.TrimSpace(typed)
+			}
+		case json.Number:
+			if typed.String() != "" {
+				return typed.String()
 			}
 		case float64:
 			return strconv.FormatInt(int64(typed), 10)
@@ -379,8 +385,8 @@ func isAudioFile(path string) bool {
 
 func compareNatural(a, b string) int {
 	for len(a) > 0 && len(b) > 0 {
-		aDigit := unicode.IsDigit(rune(a[0]))
-		bDigit := unicode.IsDigit(rune(b[0]))
+		aDigit := isASCIIDigit(a[0])
+		bDigit := isASCIIDigit(b[0])
 		if aDigit && bDigit {
 			aNum, aRest := takeDigits(a)
 			bNum, bRest := takeDigits(b)
@@ -401,9 +407,13 @@ func compareNatural(a, b string) int {
 	return cmp.Compare(len(a), len(b))
 }
 
+func isASCIIDigit(c byte) bool {
+	return c >= '0' && c <= '9'
+}
+
 func takeDigits(s string) (string, string) {
 	i := 0
-	for i < len(s) && s[i] >= '0' && s[i] <= '9' {
+	for i < len(s) && isASCIIDigit(s[i]) {
 		i++
 	}
 	trimmed := strings.TrimLeft(s[:i], "0")

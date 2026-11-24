@@ -120,14 +120,26 @@ func (m *Manager) Update(jobID string, ev model.ProgressEvent) {
 	rec.isTerminal = terminal
 
 	for ch := range rec.subscribers {
+		if terminal {
+			// Ensure the final completed/failed event is never dropped for a slow consumer.
+			select {
+			case ch <- ev:
+			default:
+				select {
+				case <-ch:
+				default:
+				}
+				ch <- ev
+			}
+			close(ch)
+			delete(rec.subscribers, ch)
+			continue
+		}
+
 		select {
 		case ch <- ev:
 		default:
 			// Drop intermediate frame if slow consumer buffer is full.
-		}
-		if terminal {
-			close(ch)
-			delete(rec.subscribers, ch)
 		}
 	}
 	m.mu.Unlock()

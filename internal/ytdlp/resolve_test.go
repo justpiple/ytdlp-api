@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 )
 
 func TestIsShortLink(t *testing.T) {
@@ -58,10 +59,9 @@ func TestIsTikTokPhotoURL(t *testing.T) {
 }
 
 func TestResolveShortURL(t *testing.T) {
-	t.Parallel()
+	defer goleak.VerifyNone(t)
 
 	t.Run("follows redirect to final photo url", func(t *testing.T) {
-		t.Parallel()
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/short" {
 				http.Redirect(w, r, "/@user/photo/73456789", http.StatusFound)
@@ -76,7 +76,6 @@ func TestResolveShortURL(t *testing.T) {
 	})
 
 	t.Run("stops and returns original on too many redirects", func(t *testing.T) {
-		t.Parallel()
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			hop := 0
 			if r.URL.Path != "/start" {
@@ -92,7 +91,6 @@ func TestResolveShortURL(t *testing.T) {
 	})
 
 	t.Run("non-short url returns untouched without network call", func(t *testing.T) {
-		t.Parallel()
 		raw := "https://www.instagram.com/p/C0abc/"
 		assert.Equal(t, raw, ResolveShortURL(t.Context(), raw, ""))
 	})

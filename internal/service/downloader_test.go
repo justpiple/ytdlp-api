@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -309,11 +307,6 @@ func TestDownloader_AutoDetectAndCarouselStrategy(t *testing.T) {
 	t.Run("tiktok unresolved url producing audio-only triggers gallery-dl image recovery", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
 
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-		}))
-		defer srv.Close()
-
 		runner := &mockRunner{
 			downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
 				audioOnly := filepath.Join(opts.OutputDir, "01_music.mp3")
@@ -440,6 +433,30 @@ func TestDownloader_AutoDetectAndCarouselStrategy(t *testing.T) {
 		assert.False(t, gdCalled)
 		assert.Equal(t, model.MediaKindVideo, capturedMediaType)
 		assert.Equal(t, engineYTDLP, res.Engine)
+	})
+
+	t.Run("empty primary result without error falls back and returns error when fallback also fails", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+
+		runner := &mockRunner{
+			downloadFn: func(ctx context.Context, opts ytdlp.DownloadOptions, _ ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error) {
+				return nil, nil, ytdlp.ErrMediaNotFound
+			},
+		}
+		gallery := &mockGalleryRunner{
+			downloadFn: func(ctx context.Context, opts gallerydl.Options, _ ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
+				return model.MediaMetadata{}, nil, nil
+			},
+		}
+
+		svc, cancel := newTestService(t, runner, gallery)
+		defer cancel()
+
+		_, err := svc.DownloadSync(t.Context(), "http://localhost:8080", model.DownloadRequest{
+			URL: "https://www.instagram.com/p/empty/",
+		}, model.PlatformInstagram)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ytdlp.ErrMediaNotFound)
 	})
 }
 

@@ -70,10 +70,10 @@ func TestExtractAndCleanupMetadata(t *testing.T) {
 			wantUploader: "traveler",
 		},
 		{
-			name:         "twitter post metadata with nested author",
-			jsonPayload:  `{"tweet_id":18999999,"content":"Photo dump","author":{"name":"alice"},"category":"twitter"}`,
+			name:         "twitter post metadata with nested author and 64-bit snowflake id",
+			jsonPayload:  `{"tweet_id":1899999999999999999,"content":"Photo dump","author":{"name":"alice"},"category":"twitter"}`,
 			platform:     model.PlatformTwitter,
-			wantID:       "18999999",
+			wantID:       "1899999999999999999",
 			wantTitle:    "Photo dump",
 			wantUploader: "alice",
 		},
@@ -140,6 +140,22 @@ func TestCollectOrderedMediaFiles(t *testing.T) {
 		got, err := collectOrderedMediaFiles(dir, stdoutOrder)
 		require.NoError(t, err)
 		assert.Equal(t, stdoutOrder, got)
+	})
+
+	t.Run("handles utf8 superscript byte 0xb2 without hanging", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		names := []string{"item_\xb2_10.jpg", "item_\xb2_2.jpg"}
+		for _, n := range names {
+			require.NoError(t, os.WriteFile(filepath.Join(dir, n), []byte("data"), 0o640))
+		}
+
+		got, err := collectOrderedMediaFiles(dir, nil)
+		require.NoError(t, err)
+		assert.Equal(t, []string{
+			filepath.Join(dir, "item_\xb2_2.jpg"),
+			filepath.Join(dir, "item_\xb2_10.jpg"),
+		}, got)
 	})
 }
 

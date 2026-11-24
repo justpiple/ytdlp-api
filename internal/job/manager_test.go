@@ -64,3 +64,36 @@ func TestManagerJobAndSSE(t *testing.T) {
 	_, ok := <-ch
 	assert.False(t, ok, "channel should close after terminal event")
 }
+
+func TestManagerJobSlowConsumerReceivesTerminalEvent(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	mgr := NewManager(2)
+	id := mgr.Create()
+
+	ch, unsub, err := mgr.Subscribe(id)
+	require.NoError(t, err)
+	defer unsub()
+
+	// Fill subscriber buffer (capacity 16) without reading.
+	for i := range 20 {
+		mgr.Update(id, model.ProgressEvent{
+			Status:          model.JobStatusDownloading.String(),
+			ProgressPercent: float64(i),
+			Message:         "downloading",
+		})
+	}
+
+	mgr.Update(id, model.ProgressEvent{
+		Status:          model.JobStatusCompleted.String(),
+		ProgressPercent: 100,
+		Message:         "done",
+	})
+
+	var last model.ProgressEvent
+	for ev := range ch {
+		last = ev
+	}
+	assert.Equal(t, model.JobStatusCompleted.String(), last.Status)
+	assert.Equal(t, 100.0, last.ProgressPercent)
+}

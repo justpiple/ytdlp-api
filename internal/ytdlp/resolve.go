@@ -75,7 +75,8 @@ func resolveShortURL(ctx context.Context, rawURL, proxyURL string, forceResolve 
 	reqCtx, cancel := context.WithTimeout(ctx, shortLinkTimeout)
 	defer cancel()
 
-	client := buildRedirectClient(proxyURL)
+	client, cleanup := buildRedirectClient(proxyURL)
+	defer cleanup()
 
 	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, trimmed, nil)
 	if err != nil {
@@ -101,15 +102,16 @@ func resolveShortURL(ctx context.Context, rawURL, proxyURL string, forceResolve 
 	return resolved
 }
 
-func buildRedirectClient(proxyURL string) *http.Client {
+func buildRedirectClient(proxyURL string) (*http.Client, func()) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DisableKeepAlives = true
 	if trimmedProxy := strings.TrimSpace(proxyURL); trimmedProxy != "" {
 		if parsedProxy, err := url.Parse(trimmedProxy); err == nil {
 			transport.Proxy = http.ProxyURL(parsedProxy)
 		}
 	}
 
-	return &http.Client{
+	client := &http.Client{
 		Timeout:   shortLinkTimeout,
 		Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -123,4 +125,5 @@ func buildRedirectClient(proxyURL string) *http.Client {
 			return nil
 		},
 	}
+	return client, transport.CloseIdleConnections
 }

@@ -89,7 +89,9 @@ func TestDetectMimeTypeAndMediaKind(t *testing.T) {
 	}{
 		{name: "mp4 video", ext: "mp4", wantMime: "video/mp4", wantKind: "video"},
 		{name: "mov video", ext: "mov", wantMime: "video/quicktime", wantKind: "video"},
+		{name: "avi video", ext: "avi", wantMime: "video/x-msvideo", wantKind: "video"},
 		{name: "mp3 audio", ext: "mp3", wantMime: "audio/mpeg", wantKind: "audio"},
+		{name: "flac audio", ext: "flac", wantMime: "audio/flac", wantKind: "audio"},
 		{name: "jpeg image", ext: "jpg", wantMime: "image/jpeg", wantKind: "image"},
 		{name: "gif image", ext: "gif", wantMime: "image/gif", wantKind: "image"},
 		{name: "heic image", ext: "heic", wantMime: "image/heic", wantKind: "image"},
