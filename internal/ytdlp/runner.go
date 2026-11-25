@@ -24,7 +24,7 @@ type ProgressCallback func(event model.ProgressEvent)
 
 // Runner executes yt-dlp and ffmpeg operations.
 type Runner interface {
-	GetInfo(ctx context.Context, target string, platform model.Platform, includeFormats bool, proxyOverride string) (model.MediaMetadata, error)
+	GetInfo(ctx context.Context, target string, platform model.Platform, includeFormats bool) (model.MediaMetadata, error)
 	Search(ctx context.Context, platform model.Platform, query string, limit int, proxyOverride string) ([]model.SearchResult, error)
 	Download(ctx context.Context, opts DownloadOptions, onProgress ProgressCallback) ([]model.MediaMetadata, []string, error)
 	Versions(ctx context.Context) (ytdlpVer string, ffmpegVer string, err error)
@@ -48,9 +48,8 @@ func (r *ExecRunner) GetInfo(
 	target string,
 	platform model.Platform,
 	includeFormats bool,
-	proxyOverride string,
 ) (model.MediaMetadata, error) {
-	args := BuildInfoArgs(r.cfg, target, platform, proxyOverride)
+	args := BuildInfoArgs(r.cfg, target, platform)
 	stdout, stderr, err := r.runSimple(ctx, r.cfg.YTDLPPath, args...)
 	if err != nil {
 		return model.MediaMetadata{}, classifyError(stderr, err)

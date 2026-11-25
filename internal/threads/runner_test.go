@@ -179,7 +179,7 @@ func TestHTTPRunner_DownloadAndGetInfo(t *testing.T) {
 	runner.httpClient = srv.Client()
 
 	t.Run("GetInfo returns metadata and formats", func(t *testing.T) {
-		meta, err := runner.GetInfo(t.Context(), srv.URL+"/@nexorapublic/post/DgFv18ok-A3", "")
+		meta, err := runner.GetInfo(t.Context(), srv.URL+"/@nexorapublic/post/DgFv18ok-A3")
 		require.NoError(t, err)
 		assert.True(t, sawSecFetchMode.Load())
 		assert.Equal(t, "DgFv18ok-A3", meta.ID)

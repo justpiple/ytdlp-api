@@ -1383,10 +1383,6 @@ const docTemplate = `{
                     "type": "string",
                     "example": "100M"
                 },
-                "proxy": {
-                    "type": "string",
-                    "example": ""
-                },
                 "quality": {
                     "type": "string",
                     "enum": [
@@ -1624,10 +1620,6 @@ const docTemplate = `{
                 "include_formats": {
                     "type": "boolean",
                     "example": true
-                },
-                "proxy": {
-                    "type": "string",
-                    "example": ""
                 },
                 "url": {
                     "type": "string",
@@ -1873,9 +1865,6 @@ const docTemplate = `{
                 "max_filesize": {
                     "type": "string"
                 },
-                "proxy": {
-                    "type": "string"
-                },
                 "quality": {
                     "type": "string",
                     "enum": [
@@ -1937,9 +1926,6 @@ const docTemplate = `{
                 "max_filesize": {
                     "type": "string"
                 },
-                "proxy": {
-                    "type": "string"
-                },
                 "response_mode": {
                     "type": "string",
                     "enum": [
@@ -1974,9 +1960,6 @@ const docTemplate = `{
                     "example": true
                 },
                 "max_filesize": {
-                    "type": "string"
-                },
-                "proxy": {
                     "type": "string"
                 },
                 "response_mode": {
@@ -2030,9 +2013,6 @@ const docTemplate = `{
                     "type": "string",
                     "example": "100M"
                 },
-                "proxy": {
-                    "type": "string"
-                },
                 "response_mode": {
                     "type": "string",
                     "enum": [
@@ -2060,9 +2040,6 @@ const docTemplate = `{
                 "max_filesize": {
                     "type": "string",
                     "example": "100M"
-                },
-                "proxy": {
-                    "type": "string"
                 },
                 "quality": {
                     "type": "string",

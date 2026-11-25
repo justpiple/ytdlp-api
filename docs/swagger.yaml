@@ -38,9 +38,6 @@ definitions:
       max_filesize:
         example: 100M
         type: string
-      proxy:
-        example: ""
-        type: string
       quality:
         enum:
         - best
@@ -215,9 +212,6 @@ definitions:
       include_formats:
         example: true
         type: boolean
-      proxy:
-        example: ""
-        type: string
       url:
         example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
         type: string
@@ -393,8 +387,6 @@ definitions:
         type: boolean
       max_filesize:
         type: string
-      proxy:
-        type: string
       quality:
         enum:
         - best
@@ -441,8 +433,6 @@ definitions:
         type: boolean
       max_filesize:
         type: string
-      proxy:
-        type: string
       response_mode:
         enum:
         - url
@@ -468,8 +458,6 @@ definitions:
         example: true
         type: boolean
       max_filesize:
-        type: string
-      proxy:
         type: string
       response_mode:
         enum:
@@ -509,8 +497,6 @@ definitions:
       max_filesize:
         example: 100M
         type: string
-      proxy:
-        type: string
       response_mode:
         enum:
         - url
@@ -530,8 +516,6 @@ definitions:
         type: boolean
       max_filesize:
         example: 100M
-        type: string
-      proxy:
         type: string
       quality:
         enum:

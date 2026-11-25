@@ -1376,10 +1376,6 @@
                     "type": "string",
                     "example": "100M"
                 },
-                "proxy": {
-                    "type": "string",
-                    "example": ""
-                },
                 "quality": {
                     "type": "string",
                     "enum": [
@@ -1617,10 +1613,6 @@
                 "include_formats": {
                     "type": "boolean",
                     "example": true
-                },
-                "proxy": {
-                    "type": "string",
-                    "example": ""
                 },
                 "url": {
                     "type": "string",
@@ -1866,9 +1858,6 @@
                 "max_filesize": {
                     "type": "string"
                 },
-                "proxy": {
-                    "type": "string"
-                },
                 "quality": {
                     "type": "string",
                     "enum": [
@@ -1930,9 +1919,6 @@
                 "max_filesize": {
                     "type": "string"
                 },
-                "proxy": {
-                    "type": "string"
-                },
                 "response_mode": {
                     "type": "string",
                     "enum": [
@@ -1967,9 +1953,6 @@
                     "example": true
                 },
                 "max_filesize": {
-                    "type": "string"
-                },
-                "proxy": {
                     "type": "string"
                 },
                 "response_mode": {
@@ -2023,9 +2006,6 @@
                     "type": "string",
                     "example": "100M"
                 },
-                "proxy": {
-                    "type": "string"
-                },
                 "response_mode": {
                     "type": "string",
                     "enum": [
@@ -2053,9 +2033,6 @@
                 "max_filesize": {
                     "type": "string",
                     "example": "100M"
-                },
-                "proxy": {
-                    "type": "string"
                 },
                 "quality": {
                     "type": "string",

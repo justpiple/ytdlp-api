@@ -35,13 +35,12 @@ type Options struct {
 	AudioFormat string // "mp3", "m4a", "opus", or "wav"
 	MaxFilesize string
 	MaxItems    int
-	Proxy       string
 	OutputDir   string
 }
 
 // Runner extracts metadata and downloads media from Meta Threads posts.
 type Runner interface {
-	GetInfo(ctx context.Context, target, proxyOverride string) (model.MediaMetadata, error)
+	GetInfo(ctx context.Context, target string) (model.MediaMetadata, error)
 	Download(ctx context.Context, opts Options, onProgress ytdlp.ProgressCallback) (model.MediaMetadata, []string, error)
 }
 
@@ -59,8 +58,8 @@ func NewHTTPRunner(cfg config.Config) *HTTPRunner {
 }
 
 // GetInfo fetches Threads post metadata and available media formats without downloading files.
-func (r *HTTPRunner) GetInfo(ctx context.Context, target, proxyOverride string) (model.MediaMetadata, error) {
-	post, err := r.fetchPost(ctx, target, proxyOverride)
+func (r *HTTPRunner) GetInfo(ctx context.Context, target string) (model.MediaMetadata, error) {
+	post, err := r.fetchPost(ctx, target)
 	if err != nil {
 		return model.MediaMetadata{}, err
 	}
@@ -73,7 +72,7 @@ func (r *HTTPRunner) Download(
 	opts Options,
 	onProgress ytdlp.ProgressCallback,
 ) (model.MediaMetadata, []string, error) {
-	post, err := r.fetchPost(ctx, opts.Target, opts.Proxy)
+	post, err := r.fetchPost(ctx, opts.Target)
 	if err != nil {
 		return model.MediaMetadata{}, nil, err
 	}
@@ -94,7 +93,7 @@ func (r *HTTPRunner) Download(
 	}
 	maxBytes, hasMaxBytes := parseFilesizeBytes(maxSizeRaw)
 
-	client, cleanup := r.clientForProxy(opts.Proxy)
+	client, cleanup := r.clientForProxy()
 	defer cleanup()
 
 	cookiePath := ytdlp.ResolveCookiesFile(r.cfg, model.PlatformThreads)
@@ -146,8 +145,8 @@ func (r *HTTPRunner) Download(
 	return post.Metadata, files, nil
 }
 
-func (r *HTTPRunner) fetchPost(ctx context.Context, target, proxyOverride string) (extractedPost, error) {
-	client, cleanup := r.clientForProxy(proxyOverride)
+func (r *HTTPRunner) fetchPost(ctx context.Context, target string) (extractedPost, error) {
+	client, cleanup := r.clientForProxy()
 	defer cleanup()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimSpace(target), nil)
@@ -339,7 +338,7 @@ func audioEncodeSpec(format string) (string, []string) {
 	}
 }
 
-func (r *HTTPRunner) clientForProxy(proxyOverride string) (*http.Client, func()) {
+func (r *HTTPRunner) clientForProxy() (*http.Client, func()) {
 	if r.httpClient != nil {
 		return r.httpClient, func() {}
 	}
@@ -347,10 +346,7 @@ func (r *HTTPRunner) clientForProxy(proxyOverride string) (*http.Client, func())
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.DisableKeepAlives = true
 
-	proxyStr := strings.TrimSpace(proxyOverride)
-	if proxyStr == "" {
-		proxyStr = strings.TrimSpace(r.cfg.ProxyURL)
-	}
+	proxyStr := strings.TrimSpace(r.cfg.ProxyURL)
 	if proxyStr != "" {
 		if parsedProxy, err := url.Parse(proxyStr); err == nil {
 			transport.Proxy = http.ProxyURL(parsedProxy)
