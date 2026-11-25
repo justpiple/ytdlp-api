@@ -23,13 +23,12 @@ type DownloadOptions struct {
 	H264Compatible bool
 	EmbedThumbnail bool
 	MaxFilesize    string
-	Proxy          string
 	OutputDir      string
 }
 
 // BuildInfoArgs constructs CLI arguments for extracting JSON metadata without downloading.
-func BuildInfoArgs(cfg config.Config, target string, platform model.Platform, proxyOverride string) []string {
-	args := baseArgs(cfg, platform, proxyOverride)
+func BuildInfoArgs(cfg config.Config, target string, platform model.Platform) []string {
+	args := baseArgs(cfg, platform, "")
 	args = append(
 		args,
 		"--dump-single-json",
@@ -78,7 +77,7 @@ func BuildSearchArgs(cfg config.Config, platform model.Platform, query string, l
 
 // BuildDownloadArgs constructs CLI arguments for downloading media into OutputDir.
 func BuildDownloadArgs(cfg config.Config, opts DownloadOptions) []string {
-	args := baseArgs(cfg, opts.Platform, opts.Proxy)
+	args := baseArgs(cfg, opts.Platform, "")
 
 	outputTemplate := filepath.Join(opts.OutputDir, "%(autonumber)02d_%(id)s.%(ext)s")
 	args = append(

@@ -27,7 +27,6 @@ type Options struct {
 	Platform    model.Platform
 	MaxFilesize string
 	MaxItems    int
-	Proxy       string
 	OutputDir   string
 }
 
@@ -74,12 +73,8 @@ func BuildArgs(cfg config.Config, opts Options) []string {
 		args = append(args, "--filesize-max", maxSize)
 	}
 
-	proxy := strings.TrimSpace(opts.Proxy)
-	if proxy == "" {
-		proxy = cfg.ProxyURL
-	}
-	if proxy != "" {
-		args = append(args, "--proxy", proxy)
+	if cfg.ProxyURL != "" {
+		args = append(args, "--proxy", cfg.ProxyURL)
 	}
 
 	if cookiePath := ytdlp.ResolveCookiesFile(cfg, opts.Platform); cookiePath != "" {

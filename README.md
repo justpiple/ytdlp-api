@@ -84,7 +84,7 @@ Configure via `.env` or environment variables (see [`.env.example`](.env.example
 
 - **Per-platform cookies:** Place Netscape-format cookie files in `./cookies/` (e.g. `instagram.txt`, `youtube.txt`, `twitter.txt`, `threads.txt`, `facebook.txt`, `tiktok.txt`, `pinterest.txt`).
 - **Global cookies:** Set `COOKIES_FILE` as a fallback.
-- **Proxy:** Set `PROXY_URL` globally, or pass `"proxy"` in individual API requests.
+- **Proxy:** Set `PROXY_URL` globally. It applies to all downloads and info requests.
 
 ---
 

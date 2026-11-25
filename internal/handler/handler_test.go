@@ -29,7 +29,7 @@ import (
 
 type handlerMockRunner struct{}
 
-func (m *handlerMockRunner) GetInfo(_ context.Context, target string, platform model.Platform, _ bool, _ string) (model.MediaMetadata, error) {
+func (m *handlerMockRunner) GetInfo(_ context.Context, target string, platform model.Platform, _ bool) (model.MediaMetadata, error) {
 	return model.MediaMetadata{
 		ID:         "123",
 		Title:      "Test Title",
@@ -105,7 +105,7 @@ func (m *handlerMockGalleryRunner) Version(_ context.Context) (string, error) {
 
 type handlerMockThreadsRunner struct{}
 
-func (m *handlerMockThreadsRunner) GetInfo(_ context.Context, target, _ string) (model.MediaMetadata, error) {
+func (m *handlerMockThreadsRunner) GetInfo(_ context.Context, target string) (model.MediaMetadata, error) {
 	return model.MediaMetadata{
 		ID:         "DgFv18ok-A3",
 		Title:      "Threads Post",
