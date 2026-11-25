@@ -4,7 +4,6 @@ package model
 type InfoRequest struct {
 	URL            string `json:"url" binding:"required" example:"https://www.youtube.com/watch?v=dQw4w9WgXcQ"`
 	IncludeFormats bool   `json:"include_formats" example:"true"`
-	Proxy          string `json:"proxy,omitempty" example:""`
 }
 
 // DownloadRequest represents a unified or platform-specific media download request.
@@ -18,7 +17,6 @@ type DownloadRequest struct {
 	EmbedThumbnail *bool  `json:"embed_thumbnail,omitempty" example:"true"`
 	IsSearch       bool   `json:"is_search,omitempty" example:"false"`
 	MaxFilesize    string `json:"max_filesize,omitempty" example:"100M"`
-	Proxy          string `json:"proxy,omitempty" example:""`
 }
 
 // YouTubeVideoRequest represents a YouTube video download request (!ytmp4).
@@ -28,7 +26,6 @@ type YouTubeVideoRequest struct {
 	ResponseMode   string `json:"response_mode,omitempty" enums:"url,async" example:"url"`
 	H264Compatible *bool  `json:"h264_compatible,omitempty" example:"true"`
 	MaxFilesize    string `json:"max_filesize,omitempty" example:"100M"`
-	Proxy          string `json:"proxy,omitempty"`
 }
 
 // YouTubeAudioRequest represents a YouTube audio download or !play request (!ytmp3 / !play).
@@ -40,7 +37,6 @@ type YouTubeAudioRequest struct {
 	EmbedThumbnail *bool  `json:"embed_thumbnail,omitempty" example:"true"`
 	IsSearch       bool   `json:"is_search,omitempty" example:"false"`
 	MaxFilesize    string `json:"max_filesize,omitempty" example:"100M"`
-	Proxy          string `json:"proxy,omitempty"`
 }
 
 // TikTokDownloadRequest represents a TikTok video, audio, or photo slideshow download request.
@@ -51,7 +47,6 @@ type TikTokDownloadRequest struct {
 	ResponseMode   string `json:"response_mode,omitempty" enums:"url,async" example:"url"`
 	H264Compatible *bool  `json:"h264_compatible,omitempty" example:"true"`
 	MaxFilesize    string `json:"max_filesize,omitempty"`
-	Proxy          string `json:"proxy,omitempty"`
 }
 
 // SocialMediaRequest represents a download request for Instagram, Threads, X/Twitter, Facebook, or Pinterest.
@@ -63,7 +58,6 @@ type SocialMediaRequest struct {
 	ResponseMode   string `json:"response_mode,omitempty" enums:"url,async" example:"url"`
 	H264Compatible *bool  `json:"h264_compatible,omitempty" example:"true"`
 	MaxFilesize    string `json:"max_filesize,omitempty"`
-	Proxy          string `json:"proxy,omitempty"`
 }
 
 // SoundCloudDownloadRequest represents a SoundCloud track download request (!scdl).
@@ -75,5 +69,4 @@ type SoundCloudDownloadRequest struct {
 	EmbedThumbnail *bool  `json:"embed_thumbnail,omitempty" example:"true"`
 	IsSearch       bool   `json:"is_search,omitempty" example:"false"`
 	MaxFilesize    string `json:"max_filesize,omitempty"`
-	Proxy          string `json:"proxy,omitempty"`
 }

@@ -61,7 +61,6 @@ Extracts metadata and optional format list without downloading media files.
 | :--- | :--- | :--- | :--- | :--- |
 | `url` | `string` | Yes | — | Media URL |
 | `include_formats` | `bool` | No | `false` | Include available stream formats and `direct_url` values |
-| `proxy` | `string` | No | `""` | Optional proxy override |
 
 ### `POST /api/v1/download`
 
@@ -78,7 +77,6 @@ Auto-detects platform and media type (`video`, `audio`, `image`, or `carousel`) 
 | `embed_thumbnail` | `bool` | No | `true` | Embed cover art and metadata into `mp3`/`m4a` |
 | `is_search` | `bool` | No | `false` | Treat `url` as a search query (YouTube/SoundCloud) |
 | `max_filesize` | `string` | No | `MAX_FILESIZE` | Override max filesize (e.g. `"50M"`) |
-| `proxy` | `string` | No | `PROXY_URL` | Optional proxy override |
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/download \
@@ -143,20 +141,20 @@ Platform endpoints validate that `url` matches the target platform (`400 UNSUPPO
 
 - **YouTube**
   - `GET /api/v1/youtube/search?q=...&limit=5`
-  - `POST /api/v1/youtube/video` — Fields: `url` (required), `quality`, `response_mode`, `h264_compatible`, `max_filesize`, `proxy`.
-  - `POST /api/v1/youtube/audio` — Fields: `url` (required — URL or search keyword), `audio_format`, `response_mode`, `embed_thumbnail`, `is_search`, `max_filesize`, `proxy`.
+  - `POST /api/v1/youtube/video` — Fields: `url` (required), `quality`, `response_mode`, `h264_compatible`, `max_filesize`.
+  - `POST /api/v1/youtube/audio` — Fields: `url` (required — URL or search keyword), `audio_format`, `response_mode`, `embed_thumbnail`, `is_search`, `max_filesize`.
 - **TikTok**
-  - `POST /api/v1/tiktok/download` — Fields: `url` (required), `type` (`auto`/`video`/`audio`, default `"auto"`), `audio_format`, `response_mode`, `h264_compatible`, `max_filesize`, `proxy`. Auto-resolves short links (`vt.tiktok.com`) and recovers photo slideshows as `carousel`.
+  - `POST /api/v1/tiktok/download` — Fields: `url` (required), `type` (`auto`/`video`/`audio`, default `"auto"`), `audio_format`, `response_mode`, `h264_compatible`, `max_filesize`. Auto-resolves short links (`vt.tiktok.com`) and recovers photo slideshows as `carousel`.
 - **Instagram, Threads, X (Twitter), Facebook, Pinterest**
   - `POST /api/v1/instagram/download`
   - `POST /api/v1/threads/download`
   - `POST /api/v1/twitter/download`
   - `POST /api/v1/facebook/download`
   - `POST /api/v1/pinterest/download`
-  - Shared fields: `url` (required), `type` (`auto`/`video`/`audio`, default `"auto"`), `quality`, `audio_format`, `response_mode`, `h264_compatible`, `max_filesize`, `proxy`. Multi-item carousels return `media_type: "carousel"` and ordered entries in `data.files[]`. Pinterest resolves `pin.it` short links automatically, and Threads supports both `threads.com` and `threads.net` (via native SSR extraction, `engine: "threads"`).
+  - Shared fields: `url` (required), `type` (`auto`/`video`/`audio`, default `"auto"`), `quality`, `audio_format`, `response_mode`, `h264_compatible`, `max_filesize`. Multi-item carousels return `media_type: "carousel"` and ordered entries in `data.files[]`. Pinterest resolves `pin.it` short links automatically, and Threads supports both `threads.com` and `threads.net` (via native SSR extraction, `engine: "threads"`).
 - **SoundCloud**
   - `GET /api/v1/soundcloud/search?q=...&limit=5`
-  - `POST /api/v1/soundcloud/download` — Fields: `url` (required — URL or search keyword), `audio_format`, `response_mode`, `embed_thumbnail`, `is_search`, `max_filesize`, `proxy` (always audio-only).
+  - `POST /api/v1/soundcloud/download` — Fields: `url` (required — URL or search keyword), `audio_format`, `response_mode`, `embed_thumbnail`, `is_search`, `max_filesize` (always audio-only).
 
 ---
 

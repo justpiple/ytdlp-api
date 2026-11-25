@@ -21,14 +21,14 @@ import (
 )
 
 type mockRunner struct {
-	infoFn     func(ctx context.Context, target string, platform model.Platform, includeFormats bool, proxy string) (model.MediaMetadata, error)
+	infoFn     func(ctx context.Context, target string, platform model.Platform, includeFormats bool) (model.MediaMetadata, error)
 	searchFn   func(ctx context.Context, platform model.Platform, query string, limit int, proxy string) ([]model.SearchResult, error)
 	downloadFn func(ctx context.Context, opts ytdlp.DownloadOptions, onProgress ytdlp.ProgressCallback) ([]model.MediaMetadata, []string, error)
 	versionsFn func(ctx context.Context) (string, string, error)
 }
 
-func (m *mockRunner) GetInfo(ctx context.Context, target string, platform model.Platform, includeFormats bool, proxy string) (model.MediaMetadata, error) {
-	return m.infoFn(ctx, target, platform, includeFormats, proxy)
+func (m *mockRunner) GetInfo(ctx context.Context, target string, platform model.Platform, includeFormats bool) (model.MediaMetadata, error) {
+	return m.infoFn(ctx, target, platform, includeFormats)
 }
 
 func (m *mockRunner) Search(ctx context.Context, platform model.Platform, query string, limit int, proxy string) ([]model.SearchResult, error) {
@@ -63,15 +63,15 @@ func (m *mockGalleryRunner) Version(ctx context.Context) (string, error) {
 }
 
 type mockThreadsRunner struct {
-	infoFn     func(ctx context.Context, target, proxy string) (model.MediaMetadata, error)
+	infoFn     func(ctx context.Context, target string) (model.MediaMetadata, error)
 	downloadFn func(ctx context.Context, opts threads.Options, onProgress ytdlp.ProgressCallback) (model.MediaMetadata, []string, error)
 }
 
-func (m *mockThreadsRunner) GetInfo(ctx context.Context, target, proxy string) (model.MediaMetadata, error) {
+func (m *mockThreadsRunner) GetInfo(ctx context.Context, target string) (model.MediaMetadata, error) {
 	if m.infoFn == nil {
 		return model.MediaMetadata{Platform: "threads", Formats: []model.FormatOption{}}, nil
 	}
-	return m.infoFn(ctx, target, proxy)
+	return m.infoFn(ctx, target)
 }
 
 func (m *mockThreadsRunner) Download(ctx context.Context, opts threads.Options, onProgress ytdlp.ProgressCallback) (model.MediaMetadata, []string, error) {
@@ -535,7 +535,7 @@ func TestDownloader_AutoDetectAndCarouselStrategy(t *testing.T) {
 		gdCalled := false
 		ytCalled := false
 		runner := &mockRunner{
-			infoFn: func(ctx context.Context, target string, platform model.Platform, includeFormats bool, proxy string) (model.MediaMetadata, error) {
+			infoFn: func(ctx context.Context, target string, platform model.Platform, includeFormats bool) (model.MediaMetadata, error) {
 				ytCalled = true
 				return model.MediaMetadata{}, nil
 			},
@@ -551,7 +551,7 @@ func TestDownloader_AutoDetectAndCarouselStrategy(t *testing.T) {
 			},
 		}
 		threadsRunner := &mockThreadsRunner{
-			infoFn: func(ctx context.Context, target, proxy string) (model.MediaMetadata, error) {
+			infoFn: func(ctx context.Context, target string) (model.MediaMetadata, error) {
 				return model.MediaMetadata{
 					ID:         "DgFv18ok-A3",
 					Title:      "Threads caption",

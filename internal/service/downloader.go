@@ -71,25 +71,21 @@ func (d *Downloader) ExtractInfo(ctx context.Context, req model.InfoRequest) (mo
 		return model.MediaMetadata{}, err
 	}
 
-	effectiveProxy := strings.TrimSpace(req.Proxy)
-	if effectiveProxy == "" {
-		effectiveProxy = d.cfg.ProxyURL
-	}
-	targetURL = ytdlp.ResolveShortURL(ctx, targetURL, effectiveProxy)
+	targetURL = ytdlp.ResolveShortURL(ctx, targetURL, d.cfg.ProxyURL)
 
 	platform := ytdlp.DetectPlatform(targetURL)
 	runCtx, cancel := context.WithTimeout(ctx, d.cfg.InfoTimeout)
 	defer cancel()
 
 	if platform == model.PlatformThreads && d.threads != nil {
-		meta, err := d.threads.GetInfo(runCtx, targetURL, req.Proxy)
+		meta, err := d.threads.GetInfo(runCtx, targetURL)
 		if err != nil {
 			return model.MediaMetadata{}, fmt.Errorf("extracting info: %w", err)
 		}
 		return meta, nil
 	}
 
-	meta, err := d.runner.GetInfo(runCtx, targetURL, platform, req.IncludeFormats, req.Proxy)
+	meta, err := d.runner.GetInfo(runCtx, targetURL, platform, req.IncludeFormats)
 	if err != nil {
 		return model.MediaMetadata{}, fmt.Errorf("extracting info: %w", err)
 	}
@@ -373,7 +369,6 @@ func (d *Downloader) runGalleryDL(
 		Platform:    opts.Platform,
 		MaxFilesize: opts.MaxFilesize,
 		MaxItems:    d.cfg.MaxPlaylistItems,
-		Proxy:       opts.Proxy,
 		OutputDir:   outputDir,
 	}, onProgress)
 }
@@ -390,7 +385,6 @@ func (d *Downloader) runThreads(
 		AudioFormat: opts.AudioFormat,
 		MaxFilesize: opts.MaxFilesize,
 		MaxItems:    d.cfg.MaxPlaylistItems,
-		Proxy:       opts.Proxy,
 		OutputDir:   outputDir,
 	}, onProgress)
 }
@@ -638,7 +632,7 @@ func (d *Downloader) prepareDownloadOptions(
 		searchCtx, cancel := context.WithTimeout(ctx, d.cfg.InfoTimeout)
 		defer cancel()
 
-		results, err := d.runner.Search(searchCtx, searchPlatform, rawInput, 1, req.Proxy)
+		results, err := d.runner.Search(searchCtx, searchPlatform, rawInput, 1, "")
 		if err != nil {
 			return ytdlp.DownloadOptions{}, fmt.Errorf("resolving search query: %w", err)
 		}
@@ -662,11 +656,7 @@ func (d *Downloader) prepareDownloadOptions(
 			)
 		}
 
-		effectiveProxy := strings.TrimSpace(req.Proxy)
-		if effectiveProxy == "" {
-			effectiveProxy = d.cfg.ProxyURL
-		}
-		target = ytdlp.ResolveShortURL(ctx, validated, effectiveProxy)
+		target = ytdlp.ResolveShortURL(ctx, validated, d.cfg.ProxyURL)
 		resolvedPlatform = ytdlp.DetectPlatform(target)
 		if resolvedPlatform == model.PlatformUnknown {
 			resolvedPlatform = initialDetected
@@ -697,7 +687,6 @@ func (d *Downloader) prepareDownloadOptions(
 		H264Compatible: h264Compat,
 		EmbedThumbnail: embedThumb,
 		MaxFilesize:    req.MaxFilesize,
-		Proxy:          req.Proxy,
 	}, nil
 }
 

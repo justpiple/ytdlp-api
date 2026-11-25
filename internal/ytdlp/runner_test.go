@@ -114,7 +114,7 @@ func TestBuildDownloadArgs(t *testing.T) {
 		is.Contains(args, "100M")
 	})
 
-	t.Run("audio extraction with proxy override", func(t *testing.T) {
+	t.Run("audio extraction with env proxy", func(t *testing.T) {
 		is := assert.New(t)
 		args := BuildDownloadArgs(cfg, DownloadOptions{
 			Target:         "https://www.youtube.com/watch?v=123",
@@ -122,12 +122,10 @@ func TestBuildDownloadArgs(t *testing.T) {
 			MediaType:      "audio",
 			AudioFormat:    "mp3",
 			EmbedThumbnail: true,
-			Proxy:          "socks5://custom:1080",
 			OutputDir:      "/tmp/out",
 		})
 
-		is.Contains(args, "socks5://custom:1080")
-		is.NotContains(args, "http://env-proxy:8080")
+		is.Contains(args, "http://env-proxy:8080")
 		is.Contains(args, "--audio-format")
 		is.Contains(args, "mp3")
 		is.Contains(args, "--embed-thumbnail")

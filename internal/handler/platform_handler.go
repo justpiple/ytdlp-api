@@ -86,7 +86,6 @@ func (h *PlatformHandler) YouTubeVideo(c *gin.Context) {
 		ResponseMode:   req.ResponseMode,
 		H264Compatible: req.H264Compatible,
 		MaxFilesize:    req.MaxFilesize,
-		Proxy:          req.Proxy,
 	}
 	executeDownload(c, h.cfg, h.service, h.logger, dlReq, model.PlatformYouTube)
 }
@@ -119,7 +118,6 @@ func (h *PlatformHandler) YouTubeAudio(c *gin.Context) {
 		EmbedThumbnail: req.EmbedThumbnail,
 		IsSearch:       req.IsSearch,
 		MaxFilesize:    req.MaxFilesize,
-		Proxy:          req.Proxy,
 	}
 	executeDownload(c, h.cfg, h.service, h.logger, dlReq, model.PlatformYouTube)
 }
@@ -150,7 +148,6 @@ func (h *PlatformHandler) TikTokDownload(c *gin.Context) {
 		ResponseMode:   req.ResponseMode,
 		H264Compatible: req.H264Compatible,
 		MaxFilesize:    req.MaxFilesize,
-		Proxy:          req.Proxy,
 	}
 	executeDownload(c, h.cfg, h.service, h.logger, dlReq, model.PlatformTikTok)
 }
@@ -293,7 +290,6 @@ func (h *PlatformHandler) SoundCloudDownload(c *gin.Context) {
 		EmbedThumbnail: req.EmbedThumbnail,
 		IsSearch:       req.IsSearch,
 		MaxFilesize:    req.MaxFilesize,
-		Proxy:          req.Proxy,
 	}
 	executeDownload(c, h.cfg, h.service, h.logger, dlReq, model.PlatformSoundCloud)
 }
@@ -313,7 +309,6 @@ func (h *PlatformHandler) handleSocialMedia(c *gin.Context, platform model.Platf
 		ResponseMode:   req.ResponseMode,
 		H264Compatible: req.H264Compatible,
 		MaxFilesize:    req.MaxFilesize,
-		Proxy:          req.Proxy,
 	}
 	executeDownload(c, h.cfg, h.service, h.logger, dlReq, platform)
 }
