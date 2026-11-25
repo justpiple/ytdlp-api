@@ -29,6 +29,8 @@ services:
       INFO_TIMEOUT: ${INFO_TIMEOUT:-45s}
       MAX_FILESIZE: ${MAX_FILESIZE:-100M}
       MAX_PLAYLIST_ITEMS: ${MAX_PLAYLIST_ITEMS:-10}
+      CONCURRENT_FRAGMENTS: ${CONCURRENT_FRAGMENTS:-4}
+      FFMPEG_PRESET: ${FFMPEG_PRESET:-veryfast}
     volumes:
       - ./cookies:/app/cookies:ro
       - ytdlp_temp:/tmp/ytdlp-api

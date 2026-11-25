@@ -1,20 +1,34 @@
 package ytdlp
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/justpiple/ytdlp-api/internal/model"
 )
 
+const (
+	defaultFFmpegPreset       = "veryfast"
+	transcodeProgressInterval = 500 * time.Millisecond
+)
+
 type probeOutput struct {
 	Streams []probeStream `json:"streams"`
+	Format  probeFormat   `json:"format"`
+}
+
+type probeFormat struct {
+	Duration string `json:"duration"`
 }
 
 type probeStream struct {
@@ -23,6 +37,8 @@ type probeStream struct {
 	CodecName      string         `json:"codec_name"`
 	CodecTagString string         `json:"codec_tag_string"`
 	PixFmt         string         `json:"pix_fmt"`
+	Width          int            `json:"width"`
+	Height         int            `json:"height"`
 	Disposition    map[string]int `json:"disposition"`
 }
 
@@ -30,9 +46,12 @@ type compatibilityPlan struct {
 	needsWork          bool
 	needVideoTranscode bool
 	needAudioTranscode bool
+	needsScale         bool
 	hasAudio           bool
 	videoStreamIndex   int
 	audioStreamIndex   int
+	preset             string
+	durationSeconds    float64
 }
 
 // EnsureH264CompatibleFiles inspects downloaded video files and remuxes or transcodes
@@ -41,12 +60,18 @@ type compatibilityPlan struct {
 func EnsureH264CompatibleFiles(
 	ctx context.Context,
 	ffmpegPath string,
+	preset string,
 	filePaths []string,
 	onProgress ProgressCallback,
 ) ([]string, error) {
 	ffmpegBin, ffprobeBin := resolveFFmpegAndFFprobe(ffmpegPath)
 	if ffmpegBin == "" || ffprobeBin == "" {
 		return filePaths, nil
+	}
+
+	resolvedPreset := strings.ToLower(strings.TrimSpace(preset))
+	if resolvedPreset == "" {
+		resolvedPreset = defaultFFmpegPreset
 	}
 
 	result := make([]string, len(filePaths))
@@ -57,7 +82,14 @@ func EnsureH264CompatibleFiles(
 			continue
 		}
 
-		updatedPath, err := ensureH264CompatibleFile(ctx, ffmpegBin, ffprobeBin, path, onProgress)
+		updatedPath, err := ensureH264CompatibleFile(
+			ctx,
+			ffmpegBin,
+			ffprobeBin,
+			resolvedPreset,
+			path,
+			onProgress,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -71,10 +103,11 @@ func ensureH264CompatibleFile(
 	ctx context.Context,
 	ffmpegBin string,
 	ffprobeBin string,
+	preset string,
 	filePath string,
 	onProgress ProgressCallback,
 ) (string, error) {
-	streams, err := probeStreams(ctx, ffprobeBin, filePath)
+	streams, durationSeconds, err := probeMedia(ctx, ffprobeBin, filePath)
 	if err != nil {
 		return "", fmt.Errorf("probing %q: %w", filepath.Base(filePath), err)
 	}
@@ -83,12 +116,24 @@ func ensureH264CompatibleFile(
 	if !isVideo || !plan.needsWork {
 		return filePath, nil
 	}
+	plan.preset = preset
+	plan.durationSeconds = durationSeconds
 
 	if onProgress != nil {
+		initialPct := 99.0
+		msg := "remuxing video to H.264 MP4 with ffmpeg"
+		if plan.needVideoTranscode {
+			msg = "transcoding video to H.264 MP4 with ffmpeg"
+			if durationSeconds > 0 {
+				initialPct = 0
+			}
+		} else if plan.needAudioTranscode {
+			msg = "transcoding audio to AAC MP4 with ffmpeg"
+		}
 		onProgress(model.ProgressEvent{
 			Status:          model.JobStatusPostProcessing.String(),
-			ProgressPercent: 99,
-			Message:         "transcoding video to H.264 MP4 with ffmpeg",
+			ProgressPercent: initialPct,
+			Message:         msg,
 		})
 	}
 
@@ -100,7 +145,7 @@ func ensureH264CompatibleFile(
 	}()
 
 	args := buildTranscodeArgs(filePath, tmpOutPath, plan)
-	if err := runFFmpeg(ctx, ffmpegBin, args...); err != nil {
+	if err := runFFmpeg(ctx, ffmpegBin, durationSeconds, onProgress, args...); err != nil {
 		return "", fmt.Errorf("transcoding %q to h264 mp4: %w", filepath.Base(filePath), err)
 	}
 
@@ -153,6 +198,8 @@ func buildCompatibilityPlan(filePath string, streams []probeStream) (compatibili
 	pixFmtOK := pixFmt == "yuv420p" || pixFmt == "yuvj420p"
 	videoTagOK := tag == "" || tag == "avc1" || tag == "avc3" || tag == "[0][0][0][0]"
 	needVideoTranscode := !videoCodecOK || !pixFmtOK
+	// Skip swscale filter pass when input dimensions are already known and even.
+	needsScale := needVideoTranscode && (video.Width <= 0 || video.Height <= 0 || video.Width%2 != 0 || video.Height%2 != 0)
 
 	audioCodec := strings.ToLower(strings.TrimSpace(audio.CodecName))
 	needAudioTranscode := hasAudio && audioCodec != "aac"
@@ -164,6 +211,7 @@ func buildCompatibilityPlan(filePath string, streams []probeStream) (compatibili
 		needsWork:          needVideoTranscode || needAudioTranscode || needRemux,
 		needVideoTranscode: needVideoTranscode,
 		needAudioTranscode: needAudioTranscode,
+		needsScale:         needsScale,
 		hasAudio:           hasAudio,
 		videoStreamIndex:   video.Index,
 		audioStreamIndex:   audio.Index,
@@ -171,6 +219,11 @@ func buildCompatibilityPlan(filePath string, streams []probeStream) (compatibili
 }
 
 func buildTranscodeArgs(inputPath, outputPath string, plan compatibilityPlan) []string {
+	preset := strings.TrimSpace(plan.preset)
+	if preset == "" {
+		preset = defaultFFmpegPreset
+	}
+
 	args := []string{
 		"-y",
 		"-v", "error",
@@ -185,13 +238,16 @@ func buildTranscodeArgs(inputPath, outputPath string, plan compatibilityPlan) []
 	if plan.needVideoTranscode {
 		args = append(
 			args,
+			"-threads", "0",
 			"-c:v", "libx264",
-			"-preset", "fast",
+			"-preset", preset,
 			"-crf", "22",
 			"-pix_fmt", "yuv420p",
-			// Scale to even dimensions because libx264 with yuv420p fails on odd widths or heights.
-			"-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
 		)
+		if plan.needsScale {
+			// Scale to even dimensions because libx264 with yuv420p fails on odd widths or heights.
+			args = append(args, "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2")
+		}
 	} else {
 		args = append(args, "-c:v", "copy")
 	}
@@ -215,12 +271,12 @@ func buildTranscodeArgs(inputPath, outputPath string, plan compatibilityPlan) []
 	return args
 }
 
-func probeStreams(ctx context.Context, ffprobeBin, filePath string) ([]probeStream, error) {
+func probeMedia(ctx context.Context, ffprobeBin, filePath string) ([]probeStream, float64, error) {
 	cmd := exec.CommandContext(
 		ctx,
 		ffprobeBin,
 		"-v", "error",
-		"-show_entries", "stream=index,codec_type,codec_name,codec_tag_string,pix_fmt:stream_disposition=attached_pic",
+		"-show_entries", "stream=index,codec_type,codec_name,codec_tag_string,pix_fmt,width,height:stream_disposition=attached_pic:format=duration",
 		"-of", "json",
 		filePath,
 	)
@@ -233,31 +289,136 @@ func probeStreams(ctx context.Context, ffprobeBin, filePath string) ([]probeStre
 	if err := cmd.Run(); err != nil {
 		msg := summarizeStderr(stderr.String())
 		if msg != "" {
-			return nil, fmt.Errorf("%s: %w", msg, err)
+			return nil, 0, fmt.Errorf("%s: %w", msg, err)
 		}
-		return nil, err
+		return nil, 0, err
 	}
 
 	var parsed probeOutput
 	if err := json.Unmarshal(stdout.Bytes(), &parsed); err != nil {
-		return nil, fmt.Errorf("parsing ffprobe json: %w", err)
+		return nil, 0, fmt.Errorf("parsing ffprobe json: %w", err)
 	}
-	return parsed.Streams, nil
+
+	var durationSeconds float64
+	if parsed.Format.Duration != "" {
+		if d, parseErr := strconv.ParseFloat(strings.TrimSpace(parsed.Format.Duration), 64); parseErr == nil && d > 0 {
+			durationSeconds = d
+		}
+	}
+	return parsed.Streams, durationSeconds, nil
 }
 
-func runFFmpeg(ctx context.Context, ffmpegBin string, args ...string) error {
-	cmd := exec.CommandContext(ctx, ffmpegBin, args...)
+func runFFmpeg(
+	ctx context.Context,
+	ffmpegBin string,
+	durationSeconds float64,
+	onProgress ProgressCallback,
+	args ...string,
+) error {
+	ffmpegArgs := make([]string, 0, len(args)+3)
+	ffmpegArgs = append(ffmpegArgs, "-progress", "pipe:1", "-nostats")
+	ffmpegArgs = append(ffmpegArgs, args...)
+
+	cmd := exec.CommandContext(ctx, ffmpegBin, ffmpegArgs...)
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("creating ffmpeg stdout pipe: %w", err)
+	}
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("starting ffmpeg: %w", err)
+	}
+
+	scanner := bufio.NewScanner(stdoutPipe)
+	var outTimeUS int64
+	var speedStr string
+	lastEmit := time.Time{}
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		key, val, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+
+		switch key {
+		case "out_time_us":
+			if parsed, parseErr := strconv.ParseInt(strings.TrimSpace(val), 10, 64); parseErr == nil {
+				outTimeUS = parsed
+			}
+		case "speed":
+			speedStr = cleanPlaceholder(val)
+		case "progress":
+			if val != "continue" || onProgress == nil || durationSeconds <= 0 || outTimeUS <= 0 {
+				continue
+			}
+			now := time.Now()
+			if !lastEmit.IsZero() && now.Sub(lastEmit) < transcodeProgressInterval {
+				continue
+			}
+			lastEmit = now
+
+			elapsedSec := float64(outTimeUS) / 1_000_000.0
+			pct := math.Min((elapsedSec/durationSeconds)*100.0, 99.0)
+			onProgress(model.ProgressEvent{
+				Status:          model.JobStatusPostProcessing.String(),
+				ProgressPercent: math.Round(pct*10) / 10,
+				Speed:           speedStr,
+				ETA:             formatTranscodeETA(durationSeconds, elapsedSec, speedStr),
+				Message:         "transcoding video to H.264 MP4 with ffmpeg",
+			})
+		}
+	}
+
+	scanErr := scanner.Err()
+	waitErr := cmd.Wait()
+	if scanErr != nil && waitErr == nil {
+		return fmt.Errorf("reading ffmpeg progress: %w", scanErr)
+	}
+	if waitErr != nil {
 		msg := summarizeStderr(stderr.String())
 		if msg != "" {
-			return fmt.Errorf("%s: %w", msg, err)
+			return fmt.Errorf("%s: %w", msg, waitErr)
 		}
-		return err
+		return waitErr
 	}
 	return nil
+}
+
+func formatTranscodeETA(totalSec, elapsedSec float64, speedStr string) string {
+	remainingSec := totalSec - elapsedSec
+	if remainingSec <= 0 {
+		return ""
+	}
+	speedVal, ok := parseSpeedMultiplier(speedStr)
+	if !ok {
+		return ""
+	}
+	etaSec := int(math.Ceil(remainingSec / speedVal))
+	if etaSec < 0 {
+		return ""
+	}
+	hours := etaSec / 3600
+	minutes := (etaSec % 3600) / 60
+	seconds := etaSec % 60
+	if hours > 0 {
+		return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	}
+	return fmt.Sprintf("%02d:%02d", minutes, seconds)
+}
+
+func parseSpeedMultiplier(speedStr string) (float64, bool) {
+	trimmed := strings.TrimSpace(strings.TrimSuffix(speedStr, "x"))
+	if trimmed == "" {
+		return 0, false
+	}
+	val, err := strconv.ParseFloat(trimmed, 64)
+	if err != nil || val <= 0 {
+		return 0, false
+	}
+	return val, true
 }
 
 func resolveFFmpegAndFFprobe(ffmpegPath string) (string, string) {

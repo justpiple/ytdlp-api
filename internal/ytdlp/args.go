@@ -81,6 +81,10 @@ func BuildDownloadArgs(cfg config.Config, opts DownloadOptions) []string {
 	args := baseArgs(cfg, opts.Platform, opts.Proxy)
 
 	outputTemplate := filepath.Join(opts.OutputDir, "%(autonumber)02d_%(id)s.%(ext)s")
+	concurrentFragments := cfg.ConcurrentFragments
+	if concurrentFragments <= 0 {
+		concurrentFragments = 4
+	}
 	args = append(
 		args,
 		"--print-json",
@@ -88,6 +92,7 @@ func BuildDownloadArgs(cfg config.Config, opts DownloadOptions) []string {
 		"--newline",
 		"--progress-template", progressTemplate,
 		"--restrict-filenames",
+		"--concurrent-fragments", fmt.Sprintf("%d", concurrentFragments),
 		"--max-downloads", fmt.Sprintf("%d", cfg.MaxPlaylistItems),
 		"--playlist-items", fmt.Sprintf("1-%d", cfg.MaxPlaylistItems),
 		"-o", outputTemplate,
@@ -105,7 +110,7 @@ func BuildDownloadArgs(cfg config.Config, opts DownloadOptions) []string {
 		audioFormat := normalizeAudioFormat(opts.AudioFormat)
 		args = append(
 			args,
-			"-f", "bestaudio/best",
+			"-f", audioFormatSelector(audioFormat),
 			"-x",
 			"--audio-format", audioFormat,
 			"--audio-quality", "0",
@@ -124,7 +129,7 @@ func BuildDownloadArgs(cfg config.Config, opts DownloadOptions) []string {
 		args = append(args, "-f", formatSelector)
 		if opts.H264Compatible {
 			// Prefer H.264 (avc1) + AAC (m4a) for universal inline playback across mobile and web players.
-			args = append(args, "-S", "vcodec:h264,fps,res,acodec:m4a", "--merge-output-format", "mp4")
+			args = append(args, "-S", "vcodec:h264,res,fps,acodec:m4a", "--merge-output-format", "mp4")
 		} else {
 			args = append(args, "--merge-output-format", "mp4")
 		}
@@ -203,6 +208,19 @@ func normalizeAudioFormat(raw string) string {
 	}
 }
 
+// audioFormatSelector prefers a source stream that already matches the target
+// container's codec so yt-dlp can remux instead of re-encoding.
+func audioFormatSelector(audioFormat string) string {
+	switch audioFormat {
+	case "m4a":
+		return "bestaudio[ext=m4a]/bestaudio/best"
+	case "opus":
+		return "bestaudio[acodec=opus]/bestaudio/best"
+	default:
+		return "bestaudio/best"
+	}
+}
+
 func videoFormatSelector(quality string, h264Compatible bool) string {
 	maxHeight := 0
 	switch strings.ToLower(strings.TrimSpace(quality)) {
@@ -226,7 +244,8 @@ func videoFormatSelector(quality string, h264Compatible bool) string {
 	if maxHeight > 0 {
 		if h264Compatible {
 			return fmt.Sprintf(
-				"bestvideo[height<=%d][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=%d][vcodec^=avc1]/bestvideo[height<=%d]+bestaudio/best[height<=%d]/best",
+				"bestvideo[height<=%d][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=%d][vcodec^=avc1]+bestaudio/best[height<=%d][vcodec^=avc1]/bestvideo[height<=%d]+bestaudio/best[height<=%d]/best",
+				maxHeight,
 				maxHeight,
 				maxHeight,
 				maxHeight,
@@ -241,7 +260,7 @@ func videoFormatSelector(quality string, h264Compatible bool) string {
 	}
 
 	if h264Compatible {
-		return "bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[vcodec^=avc1]/bestvideo+bestaudio/best"
+		return "bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[vcodec^=avc1]+bestaudio/best[vcodec^=avc1]/bestvideo+bestaudio/best"
 	}
 	return "bestvideo+bestaudio/best"
 }

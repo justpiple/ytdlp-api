@@ -107,7 +107,9 @@ func TestBuildDownloadArgs(t *testing.T) {
 		is.Contains(args, "http://env-proxy:8080")
 		is.Contains(args, "--cookies")
 		is.Contains(args, igCookie)
-		is.Contains(args, "vcodec:h264,fps,res,acodec:m4a")
+		is.Contains(args, "vcodec:h264,res,fps,acodec:m4a")
+		is.Contains(args, "--concurrent-fragments")
+		is.Contains(args, "4")
 		is.Contains(args, "mp4")
 		is.Contains(args, "100M")
 	})
@@ -142,7 +144,7 @@ func TestBuildDownloadArgs(t *testing.T) {
 			OutputDir:      "/tmp/out",
 		})
 
-		is.Contains(args, "bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<=720][vcodec^=avc1]/bestvideo[height<=720]+bestaudio/best[height<=720]/best/bestaudio/best")
+		is.Contains(args, "bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=720][vcodec^=avc1]+bestaudio/best[height<=720][vcodec^=avc1]/bestvideo[height<=720]+bestaudio/best[height<=720]/best/bestaudio/best")
 		is.Contains(args, "--merge-output-format")
 	})
 }

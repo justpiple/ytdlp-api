@@ -28,6 +28,8 @@ type Config struct {
 	InfoTimeout            time.Duration
 	MaxFilesize            string
 	MaxPlaylistItems       int
+	ConcurrentFragments    int
+	FFmpegPreset           string
 }
 
 // Load reads configuration from environment variables with explicit defaults.
@@ -51,6 +53,8 @@ func Load() (Config, error) {
 		InfoTimeout:            45 * time.Second,
 		MaxFilesize:            envString("MAX_FILESIZE", "100M"),
 		MaxPlaylistItems:       10,
+		ConcurrentFragments:    4,
+		FFmpegPreset:           strings.ToLower(envString("FFMPEG_PRESET", "veryfast")),
 	}
 
 	var err error
@@ -72,8 +76,23 @@ func Load() (Config, error) {
 	if cfg.MaxPlaylistItems, err = envPositiveInt("MAX_PLAYLIST_ITEMS", cfg.MaxPlaylistItems); err != nil {
 		return Config{}, fmt.Errorf("parsing MAX_PLAYLIST_ITEMS: %w", err)
 	}
+	if cfg.ConcurrentFragments, err = envPositiveInt("CONCURRENT_FRAGMENTS", cfg.ConcurrentFragments); err != nil {
+		return Config{}, fmt.Errorf("parsing CONCURRENT_FRAGMENTS: %w", err)
+	}
+	if !isValidFFmpegPreset(cfg.FFmpegPreset) {
+		return Config{}, fmt.Errorf("parsing FFMPEG_PRESET: unsupported preset %q", cfg.FFmpegPreset)
+	}
 
 	return cfg, nil
+}
+
+func isValidFFmpegPreset(preset string) bool {
+	switch preset {
+	case "ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow":
+		return true
+	default:
+		return false
+	}
 }
 
 func envString(key, fallback string) string {

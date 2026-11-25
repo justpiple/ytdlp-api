@@ -33,6 +33,8 @@ func TestLoad(t *testing.T) {
 				"PROXY_URL":                "http://user:pass@proxy.local:3128",
 				"FILE_TTL":                 "30m",
 				"MAX_CONCURRENT_DOWNLOADS": "8",
+				"CONCURRENT_FRAGMENTS":     "6",
+				"FFMPEG_PRESET":            "superfast",
 				"BASE_URL":                 "http://ytdlp.internal:9090/",
 			},
 			wantPort:  "9090",
@@ -54,11 +56,18 @@ func TestLoad(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "invalid ffmpeg preset",
+			env: map[string]string{
+				"FFMPEG_PRESET": "invalid-preset",
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, key := range []string{"PORT", "PROXY_URL", "FILE_TTL", "MAX_CONCURRENT_DOWNLOADS", "BASE_URL"} {
+			for _, key := range []string{"PORT", "PROXY_URL", "FILE_TTL", "MAX_CONCURRENT_DOWNLOADS", "CONCURRENT_FRAGMENTS", "FFMPEG_PRESET", "BASE_URL"} {
 				t.Setenv(key, "")
 			}
 			for k, v := range tt.env {
@@ -80,6 +89,16 @@ func TestLoad(t *testing.T) {
 			is.Equal(tt.wantTTL, cfg.FileTTL)
 			is.Equal(tt.wantConc, cfg.MaxConcurrentDownloads)
 			is.NotEmpty(cfg.GalleryDLPath)
+			if tt.env["CONCURRENT_FRAGMENTS"] != "" {
+				is.Equal(6, cfg.ConcurrentFragments)
+			} else {
+				is.Equal(4, cfg.ConcurrentFragments)
+			}
+			if tt.env["FFMPEG_PRESET"] != "" {
+				is.Equal("superfast", cfg.FFmpegPreset)
+			} else {
+				is.Equal("veryfast", cfg.FFmpegPreset)
+			}
 			if tt.env["BASE_URL"] != "" {
 				is.Equal("http://ytdlp.internal:9090", cfg.BaseURL)
 			}

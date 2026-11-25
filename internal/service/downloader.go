@@ -262,7 +262,7 @@ func (d *Downloader) fetchMedia(
 	}
 
 	if opts.H264Compatible && opts.MediaType != model.MediaKindAudio {
-		filePaths, err = ytdlp.EnsureH264CompatibleFiles(ctx, d.cfg.FFmpegPath, filePaths, onProgress)
+		filePaths, err = ytdlp.EnsureH264CompatibleFiles(ctx, d.cfg.FFmpegPath, d.cfg.FFmpegPreset, filePaths, onProgress)
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("ensuring h264 compatibility: %w", err)
 		}

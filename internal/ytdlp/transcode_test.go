@@ -49,7 +49,7 @@ func TestBuildCompatibilityPlan(t *testing.T) {
 			name:     "vp9 vp09 video-only mp4 requires video transcode",
 			filePath: "/tmp/01_DgGv7HKztVz.mp4",
 			streams: []probeStream{
-				{Index: 0, CodecType: "video", CodecName: "vp9", CodecTagString: "vp09", PixFmt: "yuv420p"},
+				{Index: 0, CodecType: "video", CodecName: "vp9", CodecTagString: "vp09", PixFmt: "yuv420p", Width: 1280, Height: 720},
 			},
 			wantIsVideo:        true,
 			wantNeedsWork:      true,
@@ -163,13 +163,25 @@ func TestBuildTranscodeArgs(t *testing.T) {
 		wantMissing []string
 	}{
 		{
-			name: "vp9 video-only transcodes to libx264 yuv420p",
+			name: "vp9 video-only transcodes to libx264 yuv420p with default veryfast preset",
 			plan: compatibilityPlan{
 				needsWork:          true,
 				needVideoTranscode: true,
 				videoStreamIndex:   0,
 			},
-			wantAll:     []string{"-map", "0:0", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart"},
+			wantAll:     []string{"-map", "0:0", "-threads", "0", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-movflags", "+faststart"},
+			wantMissing: []string{"-c:a", "-vf"},
+		},
+		{
+			name: "odd dimensions include scale filter and custom preset",
+			plan: compatibilityPlan{
+				needsWork:          true,
+				needVideoTranscode: true,
+				needsScale:         true,
+				videoStreamIndex:   0,
+				preset:             "superfast",
+			},
+			wantAll:     []string{"-c:v", "libx264", "-preset", "superfast", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2"},
 			wantMissing: []string{"-c:a"},
 		},
 		{
@@ -222,7 +234,7 @@ func TestEnsureH264CompatibleFiles(t *testing.T) {
 		req := require.New(t)
 
 		paths := []string{"/tmp/01_vid.mp4"}
-		got, err := EnsureH264CompatibleFiles(t.Context(), "", paths, nil)
+		got, err := EnsureH264CompatibleFiles(t.Context(), "", "", paths, nil)
 		req.NoError(err)
 		is.Equal(paths, got)
 	})
@@ -249,7 +261,7 @@ exit 1
 		req.NoError(os.WriteFile(imgPath, []byte("jpg"), 0o640))
 		req.NoError(os.WriteFile(mp4Path, []byte("h264"), 0o640))
 
-		got, err := EnsureH264CompatibleFiles(t.Context(), ffmpegBin, []string{imgPath, mp4Path}, nil)
+		got, err := EnsureH264CompatibleFiles(t.Context(), ffmpegBin, "veryfast", []string{imgPath, mp4Path}, nil)
 		req.NoError(err)
 		is.Equal([]string{imgPath, mp4Path}, got)
 
@@ -267,7 +279,7 @@ exit 1
 		argsLog := filepath.Join(workDir, "ffmpeg-args.log")
 
 		writeFakeScript(t, binDir, "ffprobe", `#!/bin/sh
-printf '{"streams":[{"index":0,"codec_type":"video","codec_name":"vp9","codec_tag_string":"vp09","pix_fmt":"yuv420p"}]}\n'
+printf '{"streams":[{"index":0,"codec_type":"video","codec_name":"vp9","codec_tag_string":"vp09","pix_fmt":"yuv420p","width":1280,"height":720}]}\n'
 `)
 		ffmpegBin := writeFakeScript(t, binDir, "ffmpeg", fmt.Sprintf(`#!/bin/sh
 printf '%%s\n' "$*" > %q
@@ -279,7 +291,7 @@ printf 'transcoded-h264' > "$last"
 		req.NoError(os.WriteFile(vp9Path, []byte("vp9-payload"), 0o640))
 
 		var events []model.ProgressEvent
-		got, err := EnsureH264CompatibleFiles(t.Context(), ffmpegBin, []string{vp9Path}, func(ev model.ProgressEvent) {
+		got, err := EnsureH264CompatibleFiles(t.Context(), ffmpegBin, "veryfast", []string{vp9Path}, func(ev model.ProgressEvent) {
 			events = append(events, ev)
 		})
 		req.NoError(err)
@@ -292,10 +304,47 @@ printf 'transcoded-h264' > "$last"
 		loggedArgs, logErr := os.ReadFile(argsLog)
 		req.NoError(logErr)
 		is.Contains(string(loggedArgs), "-c:v libx264")
+		is.Contains(string(loggedArgs), "-preset veryfast")
 		is.Contains(string(loggedArgs), "-pix_fmt yuv420p")
+		is.NotContains(string(loggedArgs), "-vf scale=")
 
 		req.Len(events, 1)
 		is.Equal(model.JobStatusPostProcessing.String(), events[0].Status)
+	})
+
+	t.Run("streams live ffmpeg transcode progress percent speed and eta", func(t *testing.T) {
+		t.Parallel()
+		is := assert.New(t)
+		req := require.New(t)
+
+		binDir := t.TempDir()
+		workDir := t.TempDir()
+
+		writeFakeScript(t, binDir, "ffprobe", `#!/bin/sh
+printf '{"streams":[{"index":0,"codec_type":"video","codec_name":"vp9","codec_tag_string":"vp09","pix_fmt":"yuv420p","width":1280,"height":720}],"format":{"duration":"100.0"}}\n'
+`)
+		ffmpegBin := writeFakeScript(t, binDir, "ffmpeg", `#!/bin/sh
+for last in "$@"; do :; done
+printf 'out_time_us=50000000\nspeed=2.5x\nprogress=continue\n'
+printf 'transcoded-h264' > "$last"
+`)
+
+		vp9Path := filepath.Join(workDir, "01_live.mp4")
+		req.NoError(os.WriteFile(vp9Path, []byte("vp9-payload"), 0o640))
+
+		var events []model.ProgressEvent
+		got, err := EnsureH264CompatibleFiles(t.Context(), ffmpegBin, "", []string{vp9Path}, func(ev model.ProgressEvent) {
+			events = append(events, ev)
+		})
+		req.NoError(err)
+		is.Equal([]string{vp9Path}, got)
+
+		req.Len(events, 2)
+		is.InDelta(0.0, events[0].ProgressPercent, 0.01)
+		is.Equal(model.JobStatusPostProcessing.String(), events[1].Status)
+		is.InDelta(50.0, events[1].ProgressPercent, 0.1)
+		is.Equal("2.5x", events[1].Speed)
+		is.Equal("00:20", events[1].ETA)
 	})
 
 	t.Run("remuxes webm to mp4 and removes original webm", func(t *testing.T) {
@@ -317,7 +366,7 @@ printf 'remuxed-mp4' > "$last"
 		webmPath := filepath.Join(workDir, "01_clip.webm")
 		req.NoError(os.WriteFile(webmPath, []byte("webm-payload"), 0o640))
 
-		got, err := EnsureH264CompatibleFiles(t.Context(), ffmpegBin, []string{webmPath}, nil)
+		got, err := EnsureH264CompatibleFiles(t.Context(), ffmpegBin, "veryfast", []string{webmPath}, nil)
 		req.NoError(err)
 
 		wantMP4 := filepath.Join(workDir, "01_clip.mp4")
@@ -352,7 +401,7 @@ exit 1
 		vp9Path := filepath.Join(workDir, "01_fail.mp4")
 		req.NoError(os.WriteFile(vp9Path, []byte("vp9-payload"), 0o640))
 
-		_, err := EnsureH264CompatibleFiles(t.Context(), ffmpegBin, []string{vp9Path}, nil)
+		_, err := EnsureH264CompatibleFiles(t.Context(), ffmpegBin, "veryfast", []string{vp9Path}, nil)
 		req.Error(err)
 		is.Contains(err.Error(), "encoder error")
 

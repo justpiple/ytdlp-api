@@ -1,0 +1,16 @@
+{
+  "project_type": "Go (gin) yt-dlp/gallery-dl API wrapper",
+  "language": "Go",
+  "build_system": "make",
+  "test_framework": "go test with testify (is := assert.New(t)), mocks in internal/service/downloader_test.go",
+  "build_command": "go build ./...",
+  "test_command": "go test -race -shuffle=on ./...",
+  "verification_instructions": "make swag; go vet ./...; go test -race -shuffle=on ./...",
+  "snapshot_or_generated_files": "docs/docs.go, docs/swagger.json, docs/swagger.yaml via `make swag` (swag init -g cmd/server/main.go)",
+  "setup_instructions": "go mod download",
+  "environment_constraints": "swag binary at $(go env GOPATH)/bin/swag; install with go install github.com/swaggo/swag/cmd/swag@latest if missing",
+  "contribution_requirements": "AGENTS.md: load golang-how-to skill; update Swagger annotations/model tags, run make swag, update API.md and README.md in English, run go test -race -shuffle=on ./... and go vet ./... No generic type args in swaggo annotations.",
+  "key_patterns": "Request structs in internal/model/request.go; handlers in internal/handler/{platform,unified}_handler.go; service in internal/service/downloader.go; runners in internal/ytdlp, internal/gallerydl, internal/threads. Global proxy via cfg.ProxyURL (PROXY_URL env).",
+  "relevant_files": ["internal/model/request.go","internal/handler/platform_handler.go","internal/service/downloader.go","internal/service/downloader_test.go","internal/ytdlp/args.go","internal/ytdlp/runner.go","internal/ytdlp/runner_test.go","internal/gallerydl/runner.go","internal/gallerydl/runner_test.go","internal/threads/runner.go","API.md","README.md"],
+  "directory_structure": "cmd/server, internal/{config,handler,model,service,ytdlp,gallerydl,threads}, docs (swagger)"
+}

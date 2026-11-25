@@ -77,6 +77,8 @@ Configure via `.env` or environment variables (see [`.env.example`](.env.example
 | `INFO_TIMEOUT` | `45s` | Metadata & search timeout |
 | `MAX_FILESIZE` | `100M` | Default `--max-filesize` limit |
 | `MAX_PLAYLIST_ITEMS` | `10` | Max items downloaded for carousel/playlist URLs |
+| `CONCURRENT_FRAGMENTS` | `4` | Parallel fragment downloads (`--concurrent-fragments`) for HLS/DASH streams |
+| `FFMPEG_PRESET` | `veryfast` | `libx264` preset used when transcoding non-H.264 video (`ultrafast`..`veryslow`) |
 
 ---
 
