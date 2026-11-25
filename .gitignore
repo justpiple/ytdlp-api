@@ -34,3 +34,6 @@ cookies/*.txt
 !cookies/.gitkeep
 tmp/
 /tmp/
+
+# Agent task state
+.agents/tasks/
